@@ -1,0 +1,104 @@
+// 평생교육원 설문 시스템 DB 스키마 (survey → question → option → response → answer 범용 구조)
+// 새 설문은 survey 한 행 + question/option 데이터 추가만으로 운영된다 (코드 변경 없이 확장).
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum SurveyStatus {
+  draft
+  open
+  closed
+}
+
+enum QuestionType {
+  short_text
+  single_choice
+  multi_choice
+  scale_5
+  long_text
+}
+
+/// 설문 1종
+model Survey {
+  id          String       @id @default(cuid())
+  slug        String       @unique // 안정 URL + 시드 멱등키 (예: satisfaction-2026-1)
+  title       String
+  description String?
+  status      SurveyStatus @default(draft)
+  startAt     DateTime?    @map("start_at")
+  endAt       DateTime?    @map("end_at")
+  createdAt   DateTime     @default(now()) @map("created_at")
+  questions   Question[]
+  responses   Response[]
+
+  @@map("survey")
+}
+
+/// 문항
+model Question {
+  id       String       @id @default(cuid())
+  surveyId String       @map("survey_id")
+  section  String // "A".."E"
+  orderNo  Int          @map("order_no")
+  code     String // "A1".."E4"
+  text     String
+  type     QuestionType
+  required Boolean      @default(false)
+  guide    String? // placeholder/보조 안내 (A1 예시, A4 "여러 개 선택")
+  scaleSet String?      @map("scale_set") // 척도 라벨셋 키: satisfaction | intention
+  survey   Survey       @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  options  Option[]
+  answers  Answer[]
+
+  @@unique([surveyId, code]) // 시드 멱등 + 무결성
+  @@index([surveyId, orderNo])
+  @@map("question")
+}
+
+/// 객관식·척도형 문항의 보기
+model Option {
+  id         String   @id @default(cuid())
+  questionId String   @map("question_id")
+  orderNo    Int      @map("order_no")
+  label      String
+  value      Int? // 척도 1~5; 객관식은 null
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@index([questionId, orderNo])
+  @@map("option")
+}
+
+/// 응답 1건 = 응답자 1명의 제출 (개인식별정보 미수집)
+model Response {
+  id          String   @id @default(cuid())
+  surveyId    String   @map("survey_id")
+  submittedAt DateTime @default(now()) @map("submitted_at")
+  userAgent   String?  @map("user_agent") // 통계용(PC/모바일 비율 등), 개인식별 아님
+  survey      Survey   @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  answers     Answer[]
+
+  @@index([surveyId])
+  @@map("response")
+}
+
+/// 문항별 응답값 (복수선택은 선택 개수만큼 행 생성)
+model Answer {
+  id          String   @id @default(cuid())
+  responseId  String   @map("response_id")
+  questionId  String   @map("question_id")
+  valueText   String?  @map("value_text") // 단답/장문/선택 라벨
+  valueNumber Int?     @map("value_number") // 척도 1~5, 선택 value
+  response    Response @relation(fields: [responseId], references: [id], onDelete: Cascade)
+  question    Question @relation(fields: [questionId], references: [id])
+
+  @@index([responseId])
+  @@index([questionId])
+  @@map("answer")
+}
