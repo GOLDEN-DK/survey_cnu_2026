@@ -44,7 +44,6 @@ next-env.d.ts
 /src/generated/prisma
 
 # 로컬 테스트 잔여물 (수동 삭제 가능)
-/a-step.png
-/b-step.png
+/*.png
 /.playwright-mcp/
 /prisma/_*.ts
