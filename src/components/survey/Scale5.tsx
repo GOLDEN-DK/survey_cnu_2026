@@ -34,16 +34,16 @@ export function Scale5({ scaleSet, value, labelledBy, onChange }: Props) {
                 : "border-line bg-bg text-ink hover:border-brand",
             ].join(" ")}
           >
-            <span aria-hidden className="text-3xl">
+            <span aria-hidden className="shrink-0 text-[28px] leading-none">
               {o.emoji}
             </span>
-            <span className="flex-1 text-left">
+            <span className="min-w-0 flex-1 break-keep text-left">
               <span className="mr-2 font-bold">{o.value}</span>
               {o.label}
             </span>
             <span
               aria-hidden
-              className={`text-2xl ${selected ? "opacity-100" : "opacity-0"}`}
+              className={`shrink-0 text-2xl ${selected ? "opacity-100" : "opacity-0"}`}
             >
               ✓
             </span>

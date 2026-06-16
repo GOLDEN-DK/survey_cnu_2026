@@ -26,6 +26,11 @@ import { submitResponse } from "./actions";
 
 type Props = { survey: SurveyDTO };
 
+// 입력 요소(단답·장문) 포커스 판별 — 모바일 키보드 표시 중 하단 고정 버튼을 숨기기 위함
+const isTextInput = (el: EventTarget | null): boolean =>
+  el instanceof HTMLElement &&
+  (el.tagName === "INPUT" || el.tagName === "TEXTAREA");
+
 export function SurveyRunner({ survey }: Props) {
   const router = useRouter();
   const steps = buildSteps(survey.questions);
@@ -36,6 +41,7 @@ export function SurveyRunner({ survey }: Props) {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [alreadyDone, setAlreadyDone] = useState(false);
   const [hydrated, setHydrated] = useState(false);
+  const [typing, setTyping] = useState(false); // 입력 포커스 중(모바일 키보드) 하단 버튼 숨김
   const [state, submitAction, pending] = useActionState(submitResponse, null);
 
   // 마운트 시 중간저장 복원
@@ -167,6 +173,9 @@ export function SurveyRunner({ survey }: Props) {
         <p className="whitespace-pre-line text-body leading-relaxed text-ink">
           {survey.description}
         </p>
+        <p className="text-help text-ink-soft">
+          약 5분 정도 걸립니다 · 총 {survey.questions.length}개 문항
+        </p>
         <button
           type="button"
           onClick={goNext}
@@ -180,7 +189,15 @@ export function SurveyRunner({ survey }: Props) {
 
   const current = steps[step - 1];
   return (
-    <div className="flex flex-1 flex-col">
+    <div
+      className="flex flex-1 flex-col"
+      onFocus={(e) => {
+        if (isTextInput(e.target)) setTyping(true);
+      }}
+      onBlur={(e) => {
+        if (isTextInput(e.target) && !isTextInput(e.relatedTarget)) setTyping(false);
+      }}
+    >
       <ProgressBar current={step} total={steps.length} title={current.title} />
       <div className="flex flex-col gap-4">
         {current.questions.map((q) => (
@@ -198,13 +215,15 @@ export function SurveyRunner({ survey }: Props) {
           ⚠ {state.message}
         </p>
       )}
-      <NavButtons
-        isFirst={false}
-        isLast={step === steps.length}
-        pending={pending}
-        onPrev={goPrev}
-        onNext={goNext}
-      />
+      {!typing && (
+        <NavButtons
+          isFirst={false}
+          isLast={step === steps.length}
+          pending={pending}
+          onPrev={goPrev}
+          onNext={goNext}
+        />
+      )}
     </div>
   );
 }

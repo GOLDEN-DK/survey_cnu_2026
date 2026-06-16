@@ -17,7 +17,7 @@ export function NavButtons({
   onNext,
 }: Props) {
   return (
-    <div className="sticky bottom-0 z-10 mt-6 flex gap-3 border-t border-line bg-surface/95 px-1 py-4 backdrop-blur">
+    <div className="sticky bottom-0 z-10 mt-8 flex gap-3 border-t border-line bg-surface/95 px-1 py-4 backdrop-blur">
       {!isFirst && (
         <button
           type="button"
