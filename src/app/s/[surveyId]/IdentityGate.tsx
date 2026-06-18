@@ -6,13 +6,22 @@ import { useState, useTransition } from "react";
 import type { RespondentContext, LookupResult } from "@/lib/survey-types";
 import { lookupAction } from "./lookup-actions";
 
+// 입력된 숫자를 한국 휴대폰 표기(010-1234-5678)로 포맷한다. 최대 11자리.
+function formatPhone(value: string): string {
+  const d = value.replace(/\D/g, "").slice(0, 11);
+  if (d.length < 4) return d;
+  if (d.length < 8) return `${d.slice(0, 3)}-${d.slice(3)}`;
+  return `${d.slice(0, 3)}-${d.slice(3, 7)}-${d.slice(7)}`;
+}
+
 type Props = {
   surveyId: string;
   title: string;
+  description: string | null;
   onSelect: (ctx: RespondentContext) => void;
 };
 
-export function IdentityGate({ surveyId, title, onSelect }: Props) {
+export function IdentityGate({ surveyId, title, description, onSelect }: Props) {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [result, setResult] = useState<LookupResult | null>(null);
@@ -38,8 +47,13 @@ export function IdentityGate({ surveyId, title, onSelect }: Props) {
 
   return (
     <div className="flex flex-1 flex-col gap-6 py-6">
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-3">
         <h1 className="text-question font-bold text-ink">{title}</h1>
+        {description && (
+          <p className="whitespace-pre-line text-body leading-relaxed text-ink">
+            {description}
+          </p>
+        )}
         <p className="text-body leading-relaxed text-ink">
           본인 확인을 위해 <b>성함</b>과 <b>휴대폰 번호</b>를 입력해 주세요. 수강하신
           강좌가 표시되면 선택 후 설문을 시작합니다.
@@ -60,6 +74,7 @@ export function IdentityGate({ surveyId, title, onSelect }: Props) {
           <input
             id="rc-name"
             type="text"
+            lang="ko"
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="예) 홍길동"
@@ -76,9 +91,10 @@ export function IdentityGate({ surveyId, title, onSelect }: Props) {
             type="tel"
             inputMode="numeric"
             value={phone}
-            onChange={(e) => setPhone(e.target.value)}
+            onChange={(e) => setPhone(formatPhone(e.target.value))}
             placeholder="예) 010-1234-5678"
             autoComplete="tel"
+            maxLength={13}
             className={inputClass}
           />
         </div>

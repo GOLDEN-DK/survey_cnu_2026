@@ -16,6 +16,7 @@ export function SurveyEntry({ survey, requireIdentity }: Props) {
       <IdentityGate
         surveyId={survey.id}
         title={survey.title}
+        description={survey.description}
         onSelect={setRespondent}
       />
     );
