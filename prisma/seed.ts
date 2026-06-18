@@ -1,5 +1,7 @@
-// 만족도 설문(2026-1) 시드 — survey 1건 + 23문항 + 선택지를 멱등하게 삽입한다.
-// 여러 번 실행해도 중복 없이 최신 내용으로 갱신된다. 실행: npx tsx prisma/seed.ts
+// 만족도 설문(2026-1) 시드 — survey 1건 + 문항 + 선택지를 멱등하게 삽입한다.
+// 강좌명(A1)·시간대(A3)는 명단 본인확인으로 확정되므로 설문 문항에서 제외한다.
+// 여러 번 실행해도 중복 없이 최신 내용으로 갱신되며, QUESTIONS에서 빠진 기존 문항은 정리된다.
+// 실행: npx tsx prisma/seed.ts
 
 import "dotenv/config";
 import { PrismaClient } from "../src/generated/prisma/client";
@@ -33,30 +35,8 @@ type QDef = {
 
 const QUESTIONS: QDef[] = [
   // A. 응답자 기본 정보
-  {
-    code: "A1",
-    section: "A",
-    type: "short_text",
-    required: true,
-    text: "수강하신 강좌명을 입력해 주세요.",
-    guide: "예: 수필창작, 태극권, AI 관련 강좌 등",
-  },
-  {
-    code: "A2",
-    section: "A",
-    type: "single_choice",
-    required: true,
-    text: "수강 과정 구분을 선택해 주세요.",
-    choices: ["생활교양", "전문자격", "기타"],
-  },
-  {
-    code: "A3",
-    section: "A",
-    type: "single_choice",
-    required: true,
-    text: "수강 시간대를 선택해 주세요.",
-    choices: ["주간", "야간", "기타"],
-  },
+  // 강좌명·시간대는 명단 본인확인으로 확정, 과정구분(생활교양/전문자격)은 응답자가
+  // 알기 어려워 모두 문항에서 제외한다. 수강 목적(A4)만 남긴다.
   {
     code: "A4",
     section: "A",

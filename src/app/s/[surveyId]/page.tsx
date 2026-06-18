@@ -6,7 +6,8 @@ import {
   toSurveyDTO,
   getOpenState,
 } from "@/lib/survey-data";
-import { SurveyRunner } from "./SurveyRunner";
+import { surveyHasRoster } from "@/lib/enrollment-data";
+import { SurveyEntry } from "./SurveyEntry";
 
 function formatDate(d: Date | null): string {
   if (!d) return "";
@@ -49,9 +50,10 @@ export default async function SurveyPage({
   }
 
   const dto = toSurveyDTO(survey);
+  const requireIdentity = await surveyHasRoster(survey.id);
   return (
     <main className="mx-auto flex min-h-full max-w-screen-sm flex-col px-4 py-6">
-      <SurveyRunner survey={dto} />
+      <SurveyEntry survey={dto} requireIdentity={requireIdentity} />
     </main>
   );
 }

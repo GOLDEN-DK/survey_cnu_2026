@@ -6,6 +6,7 @@ import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { validateAnswer } from "@/lib/validate";
 import { getSurveyById, toQuestionDTO, getOpenState } from "@/lib/survey-data";
+import { surveyHasRoster } from "@/lib/enrollment-data";
 import type {
   SubmitPayload,
   SubmitResult,
@@ -50,48 +51,109 @@ export async function submitResponse(
   const h = await headers();
   const userAgent = h.get("user-agent")?.slice(0, 500) ?? null;
 
-  await prisma.$transaction(async (tx) => {
-    const response = await tx.response.create({
-      data: { surveyId: survey.id, userAgent },
+  // 명단 기반 설문이면 본인확인(enrollment)을 서버에서 재검증한다.
+  // 이름·전화·성별은 클라이언트 값을 믿지 않고 enrollment에서 가져와 저장한다.
+  const requireRoster = await surveyHasRoster(survey.id);
+  let resp: {
+    enrollmentId: string;
+    courseId: string;
+    respondentName: string;
+    respondentPhone: string;
+    respondentGender: string | null;
+  } | null = null;
+
+  if (requireRoster) {
+    const enrollmentId = payload.respondent?.enrollmentId;
+    if (!enrollmentId) {
+      return {
+        ok: false,
+        message: "본인 확인 정보가 없습니다. 처음부터 다시 진행해 주세요.",
+      };
+    }
+    const e = await prisma.enrollment.findFirst({
+      where: { id: enrollmentId, surveyId: survey.id },
     });
+    if (!e) {
+      return {
+        ok: false,
+        message: "수강 정보를 확인할 수 없습니다. 처음부터 다시 진행해 주세요.",
+      };
+    }
+    if (e.respondedAt) {
+      return { ok: false, message: "이미 이 강좌에 응답하셨습니다." };
+    }
+    resp = {
+      enrollmentId: e.id,
+      courseId: e.courseId,
+      respondentName: e.name,
+      respondentPhone: e.phone,
+      respondentGender: e.gender,
+    };
+  }
 
-    const rows: AnswerRow[] = [];
-    for (const q of survey.questions) {
-      const raw = byCode.get(q.code);
-      if (!raw) continue;
+  try {
+    await prisma.$transaction(async (tx) => {
+      const response = await tx.response.create({
+        data: { surveyId: survey.id, userAgent, ...(resp ?? {}) },
+      });
 
-      if (q.type === "multi_choice") {
-        for (const label of raw.multi ?? []) {
+      const rows: AnswerRow[] = [];
+      for (const q of survey.questions) {
+        const raw = byCode.get(q.code);
+        if (!raw) continue;
+
+        if (q.type === "multi_choice") {
+          for (const label of raw.multi ?? []) {
+            rows.push({
+              responseId: response.id,
+              questionId: q.id,
+              valueText: label,
+              valueNumber: null,
+            });
+          }
+        } else if (q.type === "scale_5") {
+          if (raw.valueNumber != null) {
+            rows.push({
+              responseId: response.id,
+              questionId: q.id,
+              valueText: null,
+              valueNumber: raw.valueNumber,
+            });
+          }
+        } else if (raw.valueText && raw.valueText.trim().length > 0) {
           rows.push({
             responseId: response.id,
             questionId: q.id,
-            valueText: label,
+            valueText: raw.valueText.trim(),
             valueNumber: null,
           });
         }
-      } else if (q.type === "scale_5") {
-        if (raw.valueNumber != null) {
-          rows.push({
-            responseId: response.id,
-            questionId: q.id,
-            valueText: null,
-            valueNumber: raw.valueNumber,
-          });
-        }
-      } else if (raw.valueText && raw.valueText.trim().length > 0) {
-        rows.push({
-          responseId: response.id,
-          questionId: q.id,
-          valueText: raw.valueText.trim(),
-          valueNumber: null,
+      }
+
+      if (rows.length > 0) {
+        await tx.answer.createMany({ data: rows });
+      }
+
+      // 과목별 1회 — 응답 완료 표시(다음 제출은 enrollmentId unique 제약으로 차단)
+      if (resp) {
+        await tx.enrollment.update({
+          where: { id: resp.enrollmentId },
+          data: { respondedAt: new Date() },
         });
       }
+    });
+  } catch (err) {
+    // 동시/중복 제출로 enrollmentId가 충돌한 경우
+    if (
+      err &&
+      typeof err === "object" &&
+      "code" in err &&
+      (err as { code?: string }).code === "P2002"
+    ) {
+      return { ok: false, message: "이미 이 강좌에 응답하셨습니다." };
     }
-
-    if (rows.length > 0) {
-      await tx.answer.createMany({ data: rows });
-    }
-  });
+    throw err;
+  }
 
   return { ok: true };
 }

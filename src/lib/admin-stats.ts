@@ -27,26 +27,28 @@ export type DashboardStats = {
   overallAvg: number;
   scales: ScaleStat[];
   choices: ChoiceStat[];
-  byCourse: GroupStat[];
-  byProcess: GroupStat[];
-  byTime: GroupStat[];
+  byTime: GroupStat[]; // 명단 기반 시간대(주간/야간)
+  byGender: GroupStat[]; // 명단 기반 성별 분포·만족도
+  byCourseEnrolled: GroupStat[]; // 명단 기반 정확한 강좌별 만족도
+  byProfessor: GroupStat[]; // 교수별 만족도
 };
 
 type ResponseWithAnswers = {
   submittedAt: Date;
+  respondentGender: string | null;
+  course: { name: string; professor: string; dayNight: string | null } | null;
   answers: { questionId: string; valueText: string | null; valueNumber: number | null }[];
 };
 
-// 그룹 문항(A1/A2/A3) 값별로 묶어 척도 전체 평균을 계산한다.
-function groupScaleAvg(
+// 응답을 임의 키(성별/강좌/교수/시간대 등)로 묶어 응답 수와 척도 전체 평균을 낸다.
+function groupBy(
   responses: ResponseWithAnswers[],
-  groupQuestionId: string,
+  keyOf: (r: ResponseWithAnswers) => string,
   scaleIds: Set<string>,
 ): GroupStat[] {
   const map = new Map<string, { count: number; sum: number; n: number }>();
   for (const r of responses) {
-    const groupAns = r.answers.find((a) => a.questionId === groupQuestionId);
-    const name = groupAns?.valueText?.trim() || "(미응답)";
+    const name = keyOf(r);
     const e = map.get(name) ?? { count: 0, sum: 0, n: 0 };
     e.count++;
     for (const a of r.answers) {
@@ -68,7 +70,10 @@ export async function getDashboardStats(): Promise<DashboardStats | null> {
 
   const responses = await prisma.response.findMany({
     where: { surveyId: survey.id },
-    include: { answers: true },
+    include: {
+      answers: true,
+      course: { select: { name: true, professor: true, dayNight: true } },
+    },
     orderBy: { submittedAt: "asc" },
   });
 
@@ -120,9 +125,9 @@ export async function getDashboardStats(): Promise<DashboardStats | null> {
   const allCount = scales.reduce((s, x) => s + x.count, 0);
   const overallAvg = allCount ? allSum / allCount : 0;
 
-  // 객관식 분포 (A2, A3, A4)
+  // 객관식 분포 (A4 수강 목적)
   const choices: ChoiceStat[] = [];
-  for (const code of ["A2", "A3", "A4"]) {
+  for (const code of ["A4"]) {
     const q = survey.questions.find((x) => x.code === code);
     if (!q) continue;
     const counter = new Map<string, number>();
@@ -143,13 +148,27 @@ export async function getDashboardStats(): Promise<DashboardStats | null> {
     });
   }
 
-  // 그룹별 척도 평균 (강좌 A1 / 과정 A2 / 시간대 A3)
-  const a1 = survey.questions.find((q) => q.code === "A1");
-  const a2 = survey.questions.find((q) => q.code === "A2");
-  const a3 = survey.questions.find((q) => q.code === "A3");
-  const byCourse = a1 ? groupScaleAvg(responses, a1.id, scaleIds) : [];
-  const byProcess = a2 ? groupScaleAvg(responses, a2.id, scaleIds) : [];
-  const byTime = a3 ? groupScaleAvg(responses, a3.id, scaleIds) : [];
+  // 명단 기반 집계 (성별 / 시간대 / 강좌 / 교수)
+  const byGender = groupBy(
+    responses,
+    (r) => r.respondentGender?.trim() || "(미상)",
+    scaleIds,
+  );
+  const byTime = groupBy(
+    responses,
+    (r) => r.course?.dayNight?.trim() || "(미상)",
+    scaleIds,
+  );
+  const byCourseEnrolled = groupBy(
+    responses,
+    (r) => r.course?.name ?? "(미지정)",
+    scaleIds,
+  );
+  const byProfessor = groupBy(
+    responses,
+    (r) => r.course?.professor ?? "(미지정)",
+    scaleIds,
+  );
 
   return {
     total,
@@ -157,9 +176,10 @@ export async function getDashboardStats(): Promise<DashboardStats | null> {
     overallAvg,
     scales,
     choices,
-    byCourse,
-    byProcess,
     byTime,
+    byGender,
+    byCourseEnrolled,
+    byProfessor,
   };
 }
 

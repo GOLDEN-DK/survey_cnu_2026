@@ -23,6 +23,12 @@ export default function AdminLayout({
             <Link href="/admin/comments" className="hover:text-brand">
               정성 응답
             </Link>
+            <Link href="/admin/upload" className="hover:text-brand">
+              명단 관리
+            </Link>
+            <Link href="/admin/settings" className="hover:text-brand">
+              설문 설정
+            </Link>
           </nav>
           <div className="ml-auto flex items-center gap-4">
             <a

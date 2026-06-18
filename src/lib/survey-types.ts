@@ -47,9 +47,33 @@ export type AnswerValue = {
 // 문항 code → 응답값
 export type AnswerMap = Record<string, AnswerValue>;
 
+// 명단 매칭으로 확정된 응답자·과목 컨텍스트 (명단 기반 설문에서만 사용).
+// enrollmentId만 서버에서 신뢰하고, 나머지(이름/전화/성별/과목)는 제출 시 서버가 재조회해 저장한다.
+export type RespondentContext = {
+  enrollmentId: string;
+  courseName: string; // 시작 화면 표시용
+  professor: string; // 시작 화면 표시용
+  name: string; // 시작 화면 "○○○님" 표시용
+};
+
+// 본인확인 조회 결과 — IdentityGate(클라이언트)와 lookup 액션이 공유
+export type LookupCourse = {
+  enrollmentId: string;
+  courseId: string;
+  courseName: string;
+  professor: string;
+  schedule: string | null;
+  responded: boolean; // 이미 이 과목에 응답함 → 재응답 차단
+};
+
+export type LookupResult =
+  | { found: true; name: string; courses: LookupCourse[] }
+  | { found: false };
+
 // Server Action 제출 페이로드
 export type SubmitPayload = {
   surveyId: string;
+  respondent?: RespondentContext; // 명단 기반 설문이면 필수
   answers: Array<{
     code: string;
     valueText?: string;

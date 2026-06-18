@@ -8,6 +8,7 @@ import type {
   AnswerMap,
   AnswerValue,
   SubmitPayload,
+  RespondentContext,
 } from "@/lib/survey-types";
 import { buildSteps } from "@/lib/steps";
 import { findFirstError } from "@/lib/validate";
@@ -24,16 +25,20 @@ import { NavButtons } from "@/components/survey/NavButtons";
 import { QuestionRenderer } from "@/components/survey/QuestionRenderer";
 import { submitResponse } from "./actions";
 
-type Props = { survey: SurveyDTO };
+type Props = { survey: SurveyDTO; respondent: RespondentContext | null };
 
 // 입력 요소(단답·장문) 포커스 판별 — 모바일 키보드 표시 중 하단 고정 버튼을 숨기기 위함
 const isTextInput = (el: EventTarget | null): boolean =>
   el instanceof HTMLElement &&
   (el.tagName === "INPUT" || el.tagName === "TEXTAREA");
 
-export function SurveyRunner({ survey }: Props) {
+export function SurveyRunner({ survey, respondent }: Props) {
   const router = useRouter();
   const steps = buildSteps(survey.questions);
+  // 중간저장·중복 표시는 과목(enrollment)별로 분리한다.
+  const storageKey = respondent
+    ? `${survey.id}:${respondent.enrollmentId}`
+    : survey.id;
 
   // step 0 = 시작 화면, 1..steps.length = 각 단계
   const [step, setStep] = useState(0);
@@ -46,27 +51,27 @@ export function SurveyRunner({ survey }: Props) {
 
   // 마운트 시 중간저장 복원
   useEffect(() => {
-    setAnswers(loadAnswers(survey.id));
-    setAlreadyDone(isDone(survey.id));
+    setAnswers(loadAnswers(storageKey));
+    setAlreadyDone(isDone(storageKey));
     setHydrated(true);
-  }, [survey.id]);
+  }, [storageKey]);
 
   // 답변 변경 시 자동 저장
   useEffect(() => {
-    if (hydrated) saveAnswers(survey.id, answers);
-  }, [answers, hydrated, survey.id]);
+    if (hydrated) saveAnswers(storageKey, answers);
+  }, [answers, hydrated, storageKey]);
 
   // 제출 결과 처리
   useEffect(() => {
     if (!state) return;
     if (state.ok) {
-      clearAnswers(survey.id);
-      markDone(survey.id);
+      clearAnswers(storageKey);
+      markDone(storageKey);
       router.push(`/s/${survey.slug}/complete`);
     } else if (state.errors) {
       setErrors(state.errors);
     }
-  }, [state, router, survey.id, survey.slug]);
+  }, [state, router, storageKey, survey.slug]);
 
   const setAnswer = (code: string, v: AnswerValue) => {
     setAnswers((prev) => ({ ...prev, [code]: v }));
@@ -99,6 +104,7 @@ export function SurveyRunner({ survey }: Props) {
 
     const payload: SubmitPayload = {
       surveyId: survey.id,
+      respondent: respondent ?? undefined,
       answers: survey.questions.map((q) => {
         const a = answers[q.code] ?? {};
         return {
@@ -151,8 +157,8 @@ export function SurveyRunner({ survey }: Props) {
         <button
           type="button"
           onClick={() => {
-            clearDone(survey.id);
-            clearAnswers(survey.id);
+            clearDone(storageKey);
+            clearAnswers(storageKey);
             setAnswers({});
             setAlreadyDone(false);
             setStep(0);
@@ -170,6 +176,15 @@ export function SurveyRunner({ survey }: Props) {
     return (
       <div className="flex flex-1 flex-col gap-6 py-6">
         <h1 className="text-question font-bold text-ink">{survey.title}</h1>
+        {respondent && (
+          <div className="rounded-xl border-2 border-brand/30 bg-brand/5 p-4">
+            <p className="text-help text-ink-soft">선택하신 강좌</p>
+            <p className="mt-1 text-label font-bold text-ink">
+              {respondent.courseName}
+            </p>
+            <p className="text-help text-ink-soft">{respondent.professor} 교수</p>
+          </div>
+        )}
         <p className="whitespace-pre-line text-body leading-relaxed text-ink">
           {survey.description}
         </p>

@@ -24,13 +24,26 @@ export async function GET(req: NextRequest) {
 
   const responses = await prisma.response.findMany({
     where: { surveyId: survey.id },
-    include: { answers: true },
+    include: {
+      answers: true,
+      course: { select: { name: true, professor: true, dayNight: true } },
+    },
     orderBy: { submittedAt: "asc" },
   });
   const questions = [...survey.questions].sort((a, b) => a.orderNo - b.orderNo);
 
-  // 원자료 (행=응답, 열=문항코드). 복수선택은 콤마로 합친다.
-  const header = ["번호", "제출일시", ...questions.map((q) => q.code)];
+  // 원자료 (행=응답). 응답자·강좌 정보 + 문항코드. 복수선택은 콤마로 합친다.
+  const header = [
+    "번호",
+    "제출일시",
+    "성함",
+    "연락처",
+    "성별",
+    "강좌",
+    "교수",
+    "시간대",
+    ...questions.map((q) => q.code),
+  ];
   const rows: (string | number)[][] = responses.map((r, idx) => {
     const byQ = new Map<string, string[]>();
     for (const a of r.answers) {
@@ -42,6 +55,12 @@ export async function GET(req: NextRequest) {
     return [
       idx + 1,
       r.submittedAt.toISOString().replace("T", " ").slice(0, 19),
+      r.respondentName ?? "",
+      r.respondentPhone ?? "",
+      r.respondentGender ?? "",
+      r.course?.name ?? "",
+      r.course?.professor ?? "",
+      r.course?.dayNight ?? "",
       ...questions.map((q) => (byQ.get(q.id) ?? []).join(", ")),
     ];
   });

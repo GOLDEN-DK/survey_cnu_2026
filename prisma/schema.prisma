@@ -1,5 +1,6 @@
 // 평생교육원 설문 시스템 DB 스키마 (survey → question → option → response → answer 범용 구조)
 // 새 설문은 survey 한 행 + question/option 데이터 추가만으로 운영된다 (코드 변경 없이 확장).
+// 명단 기반 설문은 course(설강과목)·enrollment(수강생)를 설문별로 업로드해 본인확인 매칭에 쓴다.
 
 generator client {
   provider = "prisma-client"
@@ -37,6 +38,8 @@ model Survey {
   createdAt   DateTime     @default(now()) @map("created_at")
   questions   Question[]
   responses   Response[]
+  courses     Course[]
+  enrollments Enrollment[]
 
   @@map("survey")
 }
@@ -75,16 +78,61 @@ model Option {
   @@map("option")
 }
 
-/// 응답 1건 = 응답자 1명의 제출 (개인식별정보 미수집)
+/// 설강과목 (설문별 업로드) — 교과목명 + 담당교수
+model Course {
+  id          String       @id @default(cuid())
+  surveyId    String       @map("survey_id")
+  orderNo     Int          @map("order_no")
+  name        String // 교과목명 (수강생 명단과 조인하는 키)
+  professor   String // 담당교수명
+  schedule    String? // 강의시간 텍스트 (예: "화 19:00~21:00")
+  dayNight    String?      @map("day_night") // 주간/야간
+  survey      Survey       @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  enrollments Enrollment[]
+  responses   Response[]
+
+  @@unique([surveyId, name]) // 업로드 멱등 + 교과목명 조인 무결성
+  @@index([surveyId, orderNo])
+  @@map("course")
+}
+
+/// 수강생 명단 (설문별 업로드) — 본인확인 매칭 대상
+model Enrollment {
+  id          String     @id @default(cuid())
+  surveyId    String     @map("survey_id")
+  courseId    String     @map("course_id")
+  name        String // 수강생 이름
+  phone       String // 정규화된 연락처 (숫자만, 예: 01012345678)
+  gender      String? // "남" / "여"
+  respondedAt DateTime?  @map("responded_at") // 과목별 1회 — 응답 완료 표시(빠른 조회용)
+  survey      Survey     @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  course      Course     @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  responses   Response[]
+
+  @@unique([surveyId, courseId, name, phone]) // 재업로드 upsert 멱등키
+  @@index([surveyId, name, phone]) // 본인확인(이름+전화) 매칭
+  @@index([courseId])
+  @@map("enrollment")
+}
+
+/// 응답 1건 = 응답자 1명의 한 과목 제출 (명단 기반 설문은 실명·과목을 함께 기록)
 model Response {
-  id          String   @id @default(cuid())
-  surveyId    String   @map("survey_id")
-  submittedAt DateTime @default(now()) @map("submitted_at")
-  userAgent   String?  @map("user_agent") // 통계용(PC/모바일 비율 등), 개인식별 아님
-  survey      Survey   @relation(fields: [surveyId], references: [id], onDelete: Cascade)
-  answers     Answer[]
+  id               String      @id @default(cuid())
+  surveyId         String      @map("survey_id")
+  submittedAt      DateTime    @default(now()) @map("submitted_at")
+  userAgent        String?     @map("user_agent") // 통계용(PC/모바일 비율 등)
+  enrollmentId     String?     @unique @map("enrollment_id") // 과목별 1회 보장
+  courseId         String?     @map("course_id")
+  respondentName   String?     @map("respondent_name") // 실명 추적 (정책 결정)
+  respondentPhone  String?     @map("respondent_phone")
+  respondentGender String?     @map("respondent_gender") // 성별 통계
+  survey           Survey      @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  enrollment       Enrollment? @relation(fields: [enrollmentId], references: [id], onDelete: SetNull)
+  course           Course?     @relation(fields: [courseId], references: [id], onDelete: SetNull)
+  answers          Answer[]
 
   @@index([surveyId])
+  @@index([courseId])
   @@map("response")
 }
 

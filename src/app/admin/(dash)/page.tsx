@@ -91,7 +91,7 @@ export default async function DashboardPage() {
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           <Card label="총 응답 수" value={stats.total} />
           <Card label="전체 만족도 평균 (5점)" value={stats.overallAvg.toFixed(2)} />
-          <Card label="응답된 강좌 수" value={stats.byCourse.length} />
+          <Card label="응답된 강좌 수" value={stats.byCourseEnrolled.length} />
         </div>
       </section>
 
@@ -144,16 +144,28 @@ export default async function DashboardPage() {
         </div>
       </section>
 
-      <section>
-        <h2 className="mb-3 text-xl font-bold text-ink">과정별 · 시간대별 평균</h2>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <GroupTable title="수강 과정 구분 (A2)" rows={stats.byProcess} />
-          <GroupTable title="수강 시간대 (A3)" rows={stats.byTime} />
-        </div>
-      </section>
+      {stats.byGender.length > 0 && (
+        <section>
+          <h2 className="mb-3 text-xl font-bold text-ink">성별 · 시간대별 만족도</h2>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <GroupTable title="성별 (수강 명단 기준)" rows={stats.byGender} />
+            <GroupTable title="시간대 (주간/야간, 명단 기준)" rows={stats.byTime} />
+          </div>
+        </section>
+      )}
+
+      {stats.byCourseEnrolled.length > 0 && (
+        <section>
+          <h2 className="mb-3 text-xl font-bold text-ink">강좌별 · 교수별 만족도</h2>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <GroupTable title="강좌별 (수강 명단 기준)" rows={stats.byCourseEnrolled} />
+            <GroupTable title="교수별" rows={stats.byProfessor} />
+          </div>
+        </section>
+      )}
 
       <section>
-        <h2 className="mb-3 text-xl font-bold text-ink">응답자 정보 분포</h2>
+        <h2 className="mb-3 text-xl font-bold text-ink">수강 목적 분포</h2>
         <div className="grid gap-3 sm:grid-cols-2">
           {stats.choices.map((c) => (
             <ChoiceTable key={c.code} choice={c} total={stats.total} />

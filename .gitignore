@@ -47,3 +47,7 @@ next-env.d.ts
 /*.png
 /.playwright-mcp/
 /prisma/_*.ts
+
+# 개인정보·원본 데이터 (절대 커밋 금지 — 수강생 명단/설강과목 원본)
+/docs/*.xls
+/docs/*.xlsx
