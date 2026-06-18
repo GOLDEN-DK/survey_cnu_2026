@@ -185,9 +185,6 @@ export function SurveyRunner({ survey, respondent }: Props) {
             <p className="text-help text-ink-soft">{respondent.professor} 교수</p>
           </div>
         )}
-        <p className="whitespace-pre-line text-body leading-relaxed text-ink">
-          {survey.description}
-        </p>
         <p className="text-help text-ink-soft">
           약 3분 정도 걸립니다 · 총 {survey.questions.length}개 문항
         </p>
