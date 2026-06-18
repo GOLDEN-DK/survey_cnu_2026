@@ -11,11 +11,13 @@ function UploadCard({
   title,
   hint,
   action,
+  slug,
 }: {
   step: number;
   title: string;
   hint: string;
   action: Action;
+  slug: string;
 }) {
   const [state, formAction, pending] = useActionState<UploadState, FormData>(
     action,
@@ -26,6 +28,7 @@ function UploadCard({
       action={formAction}
       className="flex flex-col gap-3 rounded-xl border border-line bg-white p-4"
     >
+      <input type="hidden" name="slug" value={slug} />
       <div>
         <h3 className="font-semibold text-ink">
           {step}. {title}
@@ -58,7 +61,7 @@ function UploadCard({
   );
 }
 
-export function UploadForms() {
+export function UploadForms({ slug }: { slug: string }) {
   return (
     <div className="grid gap-4 sm:grid-cols-2">
       <UploadCard
@@ -66,12 +69,14 @@ export function UploadForms() {
         title="설강과목 업로드"
         hint="교과목명·담당교수가 담긴 파일. 교과목명 기준으로 갱신(upsert)됩니다."
         action={uploadCourses}
+        slug={slug}
       />
       <UploadCard
         step={2}
         title="수강생 명단 업로드"
         hint="이름·연락처·성별이 담긴 파일. 설강과목을 먼저 올린 뒤 진행하세요. 기존 명단은 유지하고 신규만 추가합니다."
         action={uploadEnrollments}
+        slug={slug}
       />
     </div>
   );

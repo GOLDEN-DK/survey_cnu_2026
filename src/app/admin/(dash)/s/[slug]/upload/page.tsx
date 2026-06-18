@@ -2,7 +2,6 @@
 
 import { prisma } from "@/lib/prisma";
 import { getSurveyBySlug } from "@/lib/survey-data";
-import { SURVEY_SLUG } from "@/constants/survey";
 import { UploadForms } from "./UploadForms";
 
 export const dynamic = "force-dynamic";
@@ -16,8 +15,13 @@ function StatCard({ label, value }: { label: string; value: number }) {
   );
 }
 
-export default async function UploadPage() {
-  const survey = await getSurveyBySlug(SURVEY_SLUG);
+export default async function UploadPage({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
+  const { slug } = await params;
+  const survey = await getSurveyBySlug(slug);
 
   const stats = survey
     ? {
@@ -50,11 +54,11 @@ export default async function UploadPage() {
       </section>
 
       <section>
-        <UploadForms />
+        <UploadForms slug={slug} />
       </section>
 
       <p className="text-sm text-ink-soft">
-        업로드 후에는 응답자가 <code className="rounded bg-surface px-1">/s/{SURVEY_SLUG}</code>{" "}
+        업로드 후에는 응답자가 <code className="rounded bg-surface px-1">/s/{slug}</code>{" "}
         에서 이름·휴대폰 번호로 본인 확인 후 수강 강좌를 선택해 응답합니다.
       </p>
     </div>

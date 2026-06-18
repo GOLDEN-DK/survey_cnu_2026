@@ -1,7 +1,6 @@
 // 관리자 설문 설정 — 응답 기간·공개 상태 확인 및 변경
 
 import { getSurveyBySlug, getOpenState } from "@/lib/survey-data";
-import { SURVEY_SLUG } from "@/constants/survey";
 import { SettingsForm } from "./SettingsForm";
 
 export const dynamic = "force-dynamic";
@@ -19,8 +18,13 @@ const STATE_LABEL: Record<string, string> = {
   closed: "마감됨",
 };
 
-export default async function SettingsPage() {
-  const survey = await getSurveyBySlug(SURVEY_SLUG);
+export default async function SettingsPage({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
+  const { slug } = await params;
+  const survey = await getSurveyBySlug(slug);
   if (!survey) {
     return <p className="text-ink-soft">설문을 찾을 수 없습니다.</p>;
   }
@@ -45,6 +49,7 @@ export default async function SettingsPage() {
       </div>
 
       <SettingsForm
+        slug={slug}
         status={survey.status}
         startAt={toKSTDate(survey.startAt)}
         endAt={toKSTDate(survey.endAt)}

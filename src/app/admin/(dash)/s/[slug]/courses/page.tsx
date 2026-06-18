@@ -4,8 +4,13 @@ import { getDashboardStats } from "@/lib/admin-stats";
 
 export const dynamic = "force-dynamic";
 
-export default async function CoursesPage() {
-  const stats = await getDashboardStats();
+export default async function CoursesPage({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
+  const { slug } = await params;
+  const stats = await getDashboardStats(slug);
   if (!stats || stats.total === 0) {
     return <p className="text-ink-soft">아직 수집된 응답이 없습니다.</p>;
   }

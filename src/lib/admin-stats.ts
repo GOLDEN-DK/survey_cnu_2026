@@ -2,7 +2,6 @@
 
 import { prisma } from "./prisma";
 import { getSurveyBySlug } from "./survey-data";
-import { SURVEY_SLUG } from "@/constants/survey";
 
 export type ScaleStat = {
   code: string;
@@ -64,8 +63,10 @@ function groupBy(
     .sort((a, b) => b.count - a.count);
 }
 
-export async function getDashboardStats(): Promise<DashboardStats | null> {
-  const survey = await getSurveyBySlug(SURVEY_SLUG);
+export async function getDashboardStats(
+  slug: string,
+): Promise<DashboardStats | null> {
+  const survey = await getSurveyBySlug(slug);
   if (!survey) return null;
 
   const responses = await prisma.response.findMany({
@@ -192,8 +193,11 @@ export type Comment = {
 };
 
 // 정성(장문) 응답 목록 — 검색어가 있으면 본문에 포함되는 것만.
-export async function getComments(search?: string): Promise<Comment[]> {
-  const survey = await getSurveyBySlug(SURVEY_SLUG);
+export async function getComments(
+  slug: string,
+  search?: string,
+): Promise<Comment[]> {
+  const survey = await getSurveyBySlug(slug);
   if (!survey) return [];
 
   const longIds = survey.questions

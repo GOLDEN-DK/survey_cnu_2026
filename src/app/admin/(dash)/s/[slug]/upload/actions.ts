@@ -8,7 +8,6 @@ import { verifySessionToken, COOKIE_NAME } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getSurveyBySlug } from "@/lib/survey-data";
 import { parseCoursesXls, parseEnrollmentsXls } from "@/lib/xlsx-import";
-import { SURVEY_SLUG } from "@/constants/survey";
 
 export type UploadState = { ok: boolean; message: string } | null;
 
@@ -30,10 +29,11 @@ export async function uploadCourses(
   formData: FormData,
 ): Promise<UploadState> {
   await requireAdmin();
+  const slug = String(formData.get("slug") ?? "");
   const file = getFile(formData);
   if (!file) return { ok: false, message: "설강과목 파일을 선택해 주세요." };
 
-  const survey = await getSurveyBySlug(SURVEY_SLUG);
+  const survey = await getSurveyBySlug(slug);
   if (!survey) return { ok: false, message: "설문을 찾을 수 없습니다." };
 
   let parsed;
@@ -63,7 +63,7 @@ export async function uploadCourses(
     });
   }
 
-  revalidatePath("/admin/upload");
+  revalidatePath(`/admin/s/${slug}/upload`);
   return { ok: true, message: `설강과목 ${parsed.length}건을 저장했습니다.` };
 }
 
@@ -74,10 +74,11 @@ export async function uploadEnrollments(
   formData: FormData,
 ): Promise<UploadState> {
   await requireAdmin();
+  const slug = String(formData.get("slug") ?? "");
   const file = getFile(formData);
   if (!file) return { ok: false, message: "수강생 명단 파일을 선택해 주세요." };
 
-  const survey = await getSurveyBySlug(SURVEY_SLUG);
+  const survey = await getSurveyBySlug(slug);
   if (!survey) return { ok: false, message: "설문을 찾을 수 없습니다." };
 
   let parsed;
@@ -127,7 +128,7 @@ export async function uploadEnrollments(
     skipDuplicates: true,
   });
 
-  revalidatePath("/admin/upload");
+  revalidatePath(`/admin/s/${slug}/upload`);
   let message = `수강생 명단 처리 완료 — 신규 ${result.count}건 추가 (전체 ${data.length}건 중 기존 ${data.length - result.count}건은 유지).`;
   if (missing.size > 0) {
     message += ` 설강과목에 없는 교과목 ${missing.size}종은 제외했습니다.`;

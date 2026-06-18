@@ -19,6 +19,16 @@ export function getSurveyById(id: string) {
   return prisma.survey.findUnique({ where: { id }, include: includeQuestions });
 }
 
+// 관리자 설문 목록 — 응답·강좌·수강생 수를 함께 센다 (최신 생성순).
+export function listSurveys() {
+  return prisma.survey.findMany({
+    orderBy: { createdAt: "desc" },
+    include: {
+      _count: { select: { responses: true, courses: true, enrollments: true } },
+    },
+  });
+}
+
 type SurveyWithQuestions = NonNullable<
   Awaited<ReturnType<typeof getSurveyBySlug>>
 >;

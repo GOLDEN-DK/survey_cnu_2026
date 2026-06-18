@@ -4,9 +4,9 @@
 import { useActionState } from "react";
 import { updateSchedule, type ScheduleState } from "./actions";
 
-type Props = { status: string; startAt: string; endAt: string };
+type Props = { slug: string; status: string; startAt: string; endAt: string };
 
-export function SettingsForm({ status, startAt, endAt }: Props) {
+export function SettingsForm({ slug, status, startAt, endAt }: Props) {
   const [state, action, pending] = useActionState<ScheduleState, FormData>(
     updateSchedule,
     null,
@@ -17,6 +17,7 @@ export function SettingsForm({ status, startAt, endAt }: Props) {
       action={action}
       className="flex max-w-md flex-col gap-4 rounded-xl border border-line bg-white p-4"
     >
+      <input type="hidden" name="slug" value={slug} />
       <label className="flex flex-col gap-1">
         <span className="text-sm font-semibold text-ink">공개 상태</span>
         <select

@@ -5,12 +5,15 @@ import { getComments } from "@/lib/admin-stats";
 export const dynamic = "force-dynamic";
 
 export default async function CommentsPage({
+  params,
   searchParams,
 }: {
+  params: Promise<{ slug: string }>;
   searchParams: Promise<{ q?: string }>;
 }) {
+  const { slug } = await params;
   const { q } = await searchParams;
-  const comments = await getComments(q);
+  const comments = await getComments(slug, q);
 
   return (
     <div className="flex flex-col gap-4">

@@ -5,7 +5,6 @@ import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { verifySessionToken, COOKIE_NAME } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { SURVEY_SLUG } from "@/constants/survey";
 
 export type ScheduleState = { ok: boolean; message: string } | null;
 
@@ -23,6 +22,7 @@ export async function updateSchedule(
 ): Promise<ScheduleState> {
   await requireAdmin();
 
+  const slug = String(formData.get("slug") ?? "");
   const rawStatus = String(formData.get("status") ?? "");
   const startStr = String(formData.get("startAt") ?? "");
   const endStr = String(formData.get("endAt") ?? "");
@@ -46,11 +46,11 @@ export async function updateSchedule(
   }
 
   await prisma.survey.update({
-    where: { slug: SURVEY_SLUG },
+    where: { slug },
     data: { status: status as Status, startAt, endAt },
   });
 
-  revalidatePath("/admin/settings");
-  revalidatePath(`/s/${SURVEY_SLUG}`);
+  revalidatePath(`/admin/s/${slug}/settings`);
+  revalidatePath(`/s/${slug}`);
   return { ok: true, message: "설문 일정을 저장했습니다." };
 }

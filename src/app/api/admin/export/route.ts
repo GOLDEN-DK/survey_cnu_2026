@@ -6,7 +6,6 @@ import ExcelJS from "exceljs";
 import { prisma } from "@/lib/prisma";
 import { getSurveyBySlug } from "@/lib/survey-data";
 import { getDashboardStats } from "@/lib/admin-stats";
-import { SURVEY_SLUG } from "@/constants/survey";
 import { verifySessionToken, COOKIE_NAME } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
@@ -18,8 +17,9 @@ export async function GET(req: NextRequest) {
 
   const format =
     req.nextUrl.searchParams.get("format") === "csv" ? "csv" : "xlsx";
+  const slug = req.nextUrl.searchParams.get("survey") ?? "";
 
-  const survey = await getSurveyBySlug(SURVEY_SLUG);
+  const survey = await getSurveyBySlug(slug);
   if (!survey) return new Response("Survey not found", { status: 404 });
 
   const responses = await prisma.response.findMany({
@@ -95,7 +95,7 @@ export async function GET(req: NextRequest) {
   wsQ.getRow(1).font = { bold: true };
   for (const q of questions) wsQ.addRow([q.code, q.text, q.type]);
 
-  const stats = await getDashboardStats();
+  const stats = await getDashboardStats(slug);
   const ws2 = wb.addWorksheet("집계");
   ws2.addRow(["총 응답 수", stats?.total ?? 0]);
   ws2.addRow(["전체 만족도 평균", Number((stats?.overallAvg ?? 0).toFixed(2))]);
