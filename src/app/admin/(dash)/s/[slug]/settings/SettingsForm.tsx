@@ -4,9 +4,21 @@
 import { useActionState } from "react";
 import { updateSchedule, type ScheduleState } from "./actions";
 
-type Props = { slug: string; status: string; startAt: string; endAt: string };
+type Props = {
+  slug: string;
+  status: string;
+  startAt: string;
+  endAt: string;
+  description: string;
+};
 
-export function SettingsForm({ slug, status, startAt, endAt }: Props) {
+export function SettingsForm({
+  slug,
+  status,
+  startAt,
+  endAt,
+  description,
+}: Props) {
   const [state, action, pending] = useActionState<ScheduleState, FormData>(
     updateSchedule,
     null,
@@ -56,6 +68,20 @@ export function SettingsForm({ slug, status, startAt, endAt }: Props) {
         진행 중이어도 시작일 전·종료일 후에는 응답이 자동으로 닫힙니다. 기간을 비우면
         해당 제한 없이 상태(진행/마감)만 적용됩니다.
       </p>
+
+      <label className="flex flex-col gap-1">
+        <span className="text-sm font-semibold text-ink">인사말</span>
+        <textarea
+          name="description"
+          defaultValue={description}
+          rows={8}
+          className="rounded-lg border border-line bg-white px-3 py-2 text-sm leading-relaxed text-ink"
+        />
+        <span className="text-xs text-ink-soft">
+          응답자 첫 화면에 표시됩니다. 빈 줄로 문단을 나눌 수 있습니다. 비우면
+          인사말이 표시되지 않습니다.
+        </span>
+      </label>
 
       <button
         type="submit"

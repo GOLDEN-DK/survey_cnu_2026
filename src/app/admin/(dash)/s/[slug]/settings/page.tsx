@@ -53,6 +53,7 @@ export default async function SettingsPage({
         status={survey.status}
         startAt={toKSTDate(survey.startAt)}
         endAt={toKSTDate(survey.endAt)}
+        description={survey.description ?? ""}
       />
     </div>
   );

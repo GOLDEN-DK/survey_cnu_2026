@@ -26,10 +26,14 @@ export async function updateSchedule(
   const rawStatus = String(formData.get("status") ?? "");
   const startStr = String(formData.get("startAt") ?? "");
   const endStr = String(formData.get("endAt") ?? "");
+  const description = String(formData.get("description") ?? "").trim();
 
   const status = STATUSES.find((s) => s === rawStatus);
   if (!status) {
     return { ok: false, message: "공개 상태 값이 올바르지 않습니다." };
+  }
+  if (description.length > 2000) {
+    return { ok: false, message: "인사말이 너무 깁니다. (2000자 이내로 입력해 주세요)" };
   }
 
   // date 입력(YYYY-MM-DD)을 KST 기준 시작 00:00 / 종료 23:59:59로 저장한다.
@@ -47,10 +51,15 @@ export async function updateSchedule(
 
   await prisma.survey.update({
     where: { slug },
-    data: { status: status as Status, startAt, endAt },
+    data: {
+      status: status as Status,
+      startAt,
+      endAt,
+      description: description || null,
+    },
   });
 
   revalidatePath(`/admin/s/${slug}/settings`);
   revalidatePath(`/s/${slug}`);
-  return { ok: true, message: "설문 일정을 저장했습니다." };
+  return { ok: true, message: "설문 설정을 저장했습니다." };
 }
