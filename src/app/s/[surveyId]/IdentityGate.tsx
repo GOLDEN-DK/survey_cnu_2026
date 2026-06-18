@@ -49,11 +49,6 @@ export function IdentityGate({ surveyId, title, description, onSelect }: Props) 
     <div className="flex flex-1 flex-col gap-6 py-6">
       <div className="flex flex-col gap-3">
         <h1 className="text-question font-bold text-ink">{title}</h1>
-        {description && (
-          <p className="whitespace-pre-line text-body leading-relaxed text-ink">
-            {description}
-          </p>
-        )}
         <p className="text-body leading-relaxed text-ink">
           본인 확인을 위해 <b>성함</b>과 <b>휴대폰 번호</b>를 입력해 주세요. 수강하신
           강좌가 표시되면 선택 후 설문을 시작합니다.
@@ -128,6 +123,12 @@ export function IdentityGate({ surveyId, title, description, onSelect }: Props) 
 
       {result && result.found && (
         <ResultList result={result} onSelect={onSelect} />
+      )}
+
+      {description && (
+        <p className="whitespace-pre-line border-t border-line pt-5 text-body leading-relaxed text-ink-soft">
+          {description}
+        </p>
       )}
     </div>
   );
