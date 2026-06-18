@@ -2,6 +2,7 @@
 
 import { getSurveyBySlug, getOpenState } from "@/lib/survey-data";
 import { SettingsForm } from "./SettingsForm";
+import { ShareLink } from "./ShareLink";
 
 export const dynamic = "force-dynamic";
 
@@ -47,6 +48,8 @@ export default async function SettingsPage({
           {STATE_LABEL[openState] ?? openState}
         </div>
       </div>
+
+      <ShareLink slug={slug} />
 
       <SettingsForm
         slug={slug}
