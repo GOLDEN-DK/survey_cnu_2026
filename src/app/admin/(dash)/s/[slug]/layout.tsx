@@ -33,6 +33,9 @@ export default async function SurveyAdminLayout({
           <Link href={`${base}/upload`} className="hover:text-brand">
             명단 관리
           </Link>
+          <Link href={`${base}/questions`} className="hover:text-brand">
+            문항 편집
+          </Link>
           <Link href={`${base}/settings`} className="hover:text-brand">
             설문 설정
           </Link>
