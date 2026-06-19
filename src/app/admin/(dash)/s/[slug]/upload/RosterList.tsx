@@ -1,7 +1,7 @@
 "use client";
 // 응답자 명단 — 과목별 수강생 목록 + 개별 리셋/삭제 + 전체 응답 초기화.
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import {
   resetEnrollment,
   deleteEnrollment,
@@ -19,10 +19,13 @@ type Row = {
   responded: boolean;
 };
 
-// 연락처 마스킹 — 01012345678 → 010-****-5678
-function maskPhone(phone: string): string {
-  if (phone.length < 7) return phone;
-  return `${phone.slice(0, 3)}-****-${phone.slice(-4)}`;
+// 연락처 포맷 — 01012345678 → 010-1234-5678 (마스킹 없이 전체 표시)
+function formatPhone(phone: string): string {
+  if (phone.length === 11)
+    return `${phone.slice(0, 3)}-${phone.slice(3, 7)}-${phone.slice(7)}`;
+  if (phone.length === 10)
+    return `${phone.slice(0, 3)}-${phone.slice(3, 6)}-${phone.slice(6)}`;
+  return phone;
 }
 
 export function RosterList({ slug, roster }: { slug: string; roster: Row[] }) {
@@ -30,6 +33,7 @@ export function RosterList({ slug, roster }: { slug: string; roster: Row[] }) {
     RosterActionState,
     FormData
   >(resetAllResponses, null);
+  const [respondedOnly, setRespondedOnly] = useState(true);
 
   if (roster.length === 0) {
     return (
@@ -40,10 +44,11 @@ export function RosterList({ slug, roster }: { slug: string; roster: Row[] }) {
   }
 
   const respondedCount = roster.filter((r) => r.responded).length;
+  const shown = respondedOnly ? roster.filter((r) => r.responded) : roster;
 
   // 과목별 그룹 (roster는 과목 orderNo·이름 순으로 이미 정렬됨)
   const groups = new Map<string, Row[]>();
-  for (const r of roster) {
+  for (const r of shown) {
     const arr = groups.get(r.courseName) ?? [];
     arr.push(r);
     groups.set(r.courseName, arr);
@@ -56,6 +61,14 @@ export function RosterList({ slug, roster }: { slug: string; roster: Row[] }) {
         <span className="text-sm text-ink-soft">
           응답 {respondedCount} / 전체 {roster.length}
         </span>
+        <label className="flex items-center gap-1.5 text-sm text-ink-soft">
+          <input
+            type="checkbox"
+            checked={respondedOnly}
+            onChange={(e) => setRespondedOnly(e.target.checked)}
+          />
+          응답 완료만 보기
+        </label>
         <form action={allAction} className="ml-auto">
           <input type="hidden" name="slug" value={slug} />
           <button
@@ -84,6 +97,14 @@ export function RosterList({ slug, roster }: { slug: string; roster: Row[] }) {
         </p>
       )}
 
+      {shown.length === 0 && (
+        <p className="text-sm text-ink-soft">
+          {respondedOnly
+            ? "응답을 완료한 사람이 없습니다."
+            : "명단이 없습니다."}
+        </p>
+      )}
+
       {[...groups.entries()].map(([courseName, rows]) => (
         <div
           key={courseName}
@@ -103,7 +124,7 @@ export function RosterList({ slug, roster }: { slug: string; roster: Row[] }) {
               >
                 <span className="font-medium text-ink">{r.name}</span>
                 <span className="text-xs text-ink-soft">
-                  {maskPhone(r.phone)}
+                  {formatPhone(r.phone)}
                 </span>
                 {r.gender && (
                   <span className="text-xs text-ink-soft">{r.gender}</span>
