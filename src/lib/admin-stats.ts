@@ -201,7 +201,9 @@ export async function getComments(
   if (!survey) return [];
 
   const longIds = survey.questions
-    .filter((q) => q.type === "long_text")
+    .filter(
+      (q) => q.type === "long_text" || (q.type === "scale_5" && q.commentMode),
+    )
     .map((q) => q.id);
   if (longIds.length === 0) return [];
 

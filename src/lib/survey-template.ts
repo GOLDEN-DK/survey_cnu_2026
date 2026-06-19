@@ -19,6 +19,7 @@ export type QDef = {
   guide?: string;
   scaleSet?: ScaleSet;
   choices?: string[];
+  commentMode?: boolean;
 };
 
 export const SATISFACTION_QUESTIONS: QDef[] = [
@@ -121,6 +122,7 @@ export const SATISFACTION_QUESTIONS: QDef[] = [
     type: "scale_5",
     required: true,
     scaleSet: "satisfaction",
+    commentMode: true,
     text: "전반적으로 이번 학기 강좌에 만족한다.",
   },
   {

@@ -70,6 +70,7 @@ export async function createSurvey(
           required: q.required,
           guide: q.guide ?? null,
           scaleSet: q.scaleSet ?? null,
+          commentMode: q.commentMode ?? false,
         },
       });
       const opts = buildOptions(q);

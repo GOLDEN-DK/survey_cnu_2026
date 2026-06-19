@@ -45,6 +45,7 @@ export function toQuestionDTO(q: QuestionRow): QuestionDTO {
     required: q.required,
     guide: q.guide,
     scaleSet: (q.scaleSet ?? null) as ScaleSet | null,
+    commentMode: q.commentMode,
     options: q.options.map((o) => ({
       id: o.id,
       orderNo: o.orderNo,

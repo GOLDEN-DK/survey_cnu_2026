@@ -56,6 +56,7 @@ model Question {
   required Boolean      @default(false)
   guide    String? // placeholder/보조 안내 (A1 예시, A4 "여러 개 선택")
   scaleSet String?      @map("scale_set") // 척도 라벨셋 키: satisfaction | intention
+  commentMode Boolean   @default(false) @map("comment_mode") // 척도 문항 아래 인라인 의견란 노출 여부
   survey   Survey       @relation(fields: [surveyId], references: [id], onDelete: Cascade)
   options  Option[]
   answers  Answer[]

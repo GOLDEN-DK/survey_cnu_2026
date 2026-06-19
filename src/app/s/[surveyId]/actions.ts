@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { validateAnswer } from "@/lib/validate";
 import { getSurveyById, toQuestionDTO, getOpenState } from "@/lib/survey-data";
 import { surveyHasRoster } from "@/lib/enrollment-data";
+import { COMMENT_NEUTRAL } from "@/constants/survey";
 import type {
   SubmitPayload,
   SubmitResult,
@@ -119,6 +120,16 @@ export async function submitResponse(
               valueText: null,
               valueNumber: raw.valueNumber,
             });
+            // 인라인 의견: commentMode 척도 + 보통(3) 아님 + 내용 있을 때만 저장(서버 재평가)
+            const comment = raw.comment?.trim();
+            if (q.commentMode && raw.valueNumber !== COMMENT_NEUTRAL && comment) {
+              rows.push({
+                responseId: response.id,
+                questionId: q.id,
+                valueText: comment,
+                valueNumber: null,
+              });
+            }
           }
         } else if (raw.valueText && raw.valueText.trim().length > 0) {
           rows.push({

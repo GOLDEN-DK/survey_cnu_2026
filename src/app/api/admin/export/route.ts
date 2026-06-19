@@ -42,15 +42,25 @@ export async function GET(req: NextRequest) {
     "강좌",
     "교수",
     "시간대",
-    ...questions.map((q) => q.code),
+    ...questions.flatMap((q) =>
+      q.type === "scale_5" && q.commentMode
+        ? [q.code, `${q.code}_의견`]
+        : [q.code],
+    ),
   ];
   const rows: (string | number)[][] = responses.map((r, idx) => {
-    const byQ = new Map<string, string[]>();
+    const byNum = new Map<string, string[]>();
+    const byText = new Map<string, string[]>();
     for (const a of r.answers) {
-      const v = a.valueNumber != null ? String(a.valueNumber) : a.valueText ?? "";
-      const arr = byQ.get(a.questionId) ?? [];
-      arr.push(v);
-      byQ.set(a.questionId, arr);
+      if (a.valueNumber != null) {
+        const arr = byNum.get(a.questionId) ?? [];
+        arr.push(String(a.valueNumber));
+        byNum.set(a.questionId, arr);
+      } else if (a.valueText != null) {
+        const arr = byText.get(a.questionId) ?? [];
+        arr.push(a.valueText);
+        byText.set(a.questionId, arr);
+      }
     }
     return [
       idx + 1,
@@ -61,7 +71,15 @@ export async function GET(req: NextRequest) {
       r.course?.name ?? "",
       r.course?.professor ?? "",
       r.course?.dayNight ?? "",
-      ...questions.map((q) => (byQ.get(q.id) ?? []).join(", ")),
+      ...questions.flatMap((q) => {
+        const nums = byNum.get(q.id) ?? [];
+        const texts = byText.get(q.id) ?? [];
+        // commentMode 척도는 점수 칸과 의견 칸을 분리한다.
+        if (q.type === "scale_5" && q.commentMode) {
+          return [nums.join(", "), texts.join(", ")];
+        }
+        return [[...nums, ...texts].join(", ")];
+      }),
     ];
   });
 

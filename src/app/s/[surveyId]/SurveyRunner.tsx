@@ -34,7 +34,6 @@ const isTextInput = (el: EventTarget | null): boolean =>
 
 export function SurveyRunner({ survey, respondent }: Props) {
   const router = useRouter();
-  const steps = buildSteps(survey.questions);
   // 중간저장·중복 표시는 과목(enrollment)별로 분리한다.
   const storageKey = respondent
     ? `${survey.id}:${respondent.enrollmentId}`
@@ -43,6 +42,8 @@ export function SurveyRunner({ survey, respondent }: Props) {
   // step 0 = 시작 화면, 1..steps.length = 각 단계
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState<AnswerMap>({});
+
+  const steps = buildSteps(survey.questions);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [alreadyDone, setAlreadyDone] = useState(false);
   const [hydrated, setHydrated] = useState(false);
@@ -112,6 +113,7 @@ export function SurveyRunner({ survey, respondent }: Props) {
           valueText: a.text,
           valueNumber: a.number,
           multi: a.multi,
+          comment: a.comment,
         };
       }),
     };

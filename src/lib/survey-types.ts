@@ -26,6 +26,7 @@ export type QuestionDTO = {
   required: boolean;
   guide: string | null;
   scaleSet: ScaleSet | null;
+  commentMode: boolean;
   options: OptionDTO[];
 };
 
@@ -42,6 +43,7 @@ export type AnswerValue = {
   text?: string; // short_text / long_text / single_choice 라벨
   number?: number; // scale_5 값 (1~5)
   multi?: string[]; // multi_choice 선택 라벨 배열
+  comment?: string; // scale_5 인라인 의견 (commentMode 문항)
 };
 
 // 문항 code → 응답값
@@ -79,6 +81,7 @@ export type SubmitPayload = {
     valueText?: string;
     valueNumber?: number;
     multi?: string[];
+    comment?: string;
   }>;
 };
 

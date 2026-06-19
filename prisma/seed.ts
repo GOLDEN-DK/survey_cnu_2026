@@ -43,6 +43,7 @@ async function main() {
             required: q.required,
             guide: q.guide ?? null,
             scaleSet: q.scaleSet ?? null,
+            commentMode: q.commentMode ?? false,
           },
           create: {
             surveyId: survey.id,
@@ -54,6 +55,7 @@ async function main() {
             required: q.required,
             guide: q.guide ?? null,
             scaleSet: q.scaleSet ?? null,
+            commentMode: q.commentMode ?? false,
           },
         });
 

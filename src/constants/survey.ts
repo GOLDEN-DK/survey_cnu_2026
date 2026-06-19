@@ -26,6 +26,9 @@ export const SCALE_LABELS: Record<ScaleSet, ScaleOption[]> = {
   ],
 };
 
+// 척도 '보통' 점수 — 이 점수만 인라인 의견란에서 제외한다(만족·불만족일 때만 노출).
+export const COMMENT_NEUTRAL = 3;
+
 export const START_TEXT = `안녕하십니까? 충남대학교 평생교육원입니다.
 
 2026학년도 1학기 교육과정 운영 개선과 2학기 교육계획 수립을 위해 수강생 만족도 조사를 실시합니다.
