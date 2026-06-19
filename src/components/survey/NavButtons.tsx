@@ -5,6 +5,7 @@ type Props = {
   isFirst: boolean;
   isLast: boolean;
   pending?: boolean;
+  hidden?: boolean; // 모바일 폰에서 입력 중일 때만 숨김(태블릿·데스크탑은 항상 표시)
   onPrev: () => void;
   onNext: () => void;
 };
@@ -13,11 +14,14 @@ export function NavButtons({
   isFirst,
   isLast,
   pending,
+  hidden,
   onPrev,
   onNext,
 }: Props) {
   return (
-    <div className="sticky bottom-0 z-10 mt-8 flex gap-3 border-t border-line bg-surface/95 px-1 py-4 backdrop-blur">
+    <div
+      className={`sticky bottom-0 z-10 mt-8 ${hidden ? "hidden md:flex" : "flex"} gap-3 border-t border-line bg-surface/95 px-1 py-4 backdrop-blur`}
+    >
       {!isFirst && (
         <button
           type="button"

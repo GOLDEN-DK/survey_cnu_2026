@@ -229,15 +229,14 @@ export function SurveyRunner({ survey, respondent }: Props) {
           ⚠ {state.message}
         </p>
       )}
-      {!typing && (
-        <NavButtons
-          isFirst={false}
-          isLast={step === steps.length}
-          pending={pending}
-          onPrev={goPrev}
-          onNext={goNext}
-        />
-      )}
+      <NavButtons
+        isFirst={false}
+        isLast={step === steps.length}
+        pending={pending}
+        hidden={typing}
+        onPrev={goPrev}
+        onNext={goNext}
+      />
     </div>
   );
 }
