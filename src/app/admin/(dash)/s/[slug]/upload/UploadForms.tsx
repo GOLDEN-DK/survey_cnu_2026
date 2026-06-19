@@ -65,6 +65,22 @@ function UploadCard({
           {state.message}
         </p>
       )}
+      {state?.missingCourses && state.missingCourses.length > 0 && (
+        <div className="rounded-lg border border-danger/40 bg-surface p-3 text-sm">
+          <p className="font-semibold text-danger">
+            ⚠ 설강과목과 매칭되지 않아 제외된 과목 {state.missingCourses.length}종
+          </p>
+          <p className="mt-1 text-ink-soft">
+            아래 과목을 먼저 「1. 설강과목 업로드」에 등록한 뒤 수강생 명단을 다시 업로드하면 해당
+            수강생이 반영됩니다. (과목명 표기가 설강과목과 정확히 일치해야 합니다)
+          </p>
+          <ul className="mt-2 max-h-40 list-disc space-y-0.5 overflow-y-auto pl-5 text-ink">
+            {state.missingCourses.map((c) => (
+              <li key={c}>{c}</li>
+            ))}
+          </ul>
+        </div>
+      )}
     </form>
   );
 }

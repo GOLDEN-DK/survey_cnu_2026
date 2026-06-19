@@ -10,7 +10,11 @@ import { getSurveyBySlug } from "@/lib/survey-data";
 import { parseCoursesXls, parseEnrollmentsXls } from "@/lib/xlsx-import";
 import { applyEnrollments } from "@/lib/enrollment-import";
 
-export type UploadState = { ok: boolean; message: string } | null;
+export type UploadState = {
+  ok: boolean;
+  message: string;
+  missingCourses?: string[]; // 설강과목에 없어 제외된 교과목명(수강생 업로드)
+} | null;
 
 async function requireAdmin(): Promise<void> {
   const token = (await cookies()).get(COOKIE_NAME)?.value;
@@ -104,7 +108,7 @@ export async function uploadEnrollments(
   if (r.missingCourses.length > 0) {
     message += ` 설강과목에 없는 교과목 ${r.missingCourses.length}종은 제외했습니다.`;
   }
-  return { ok: true, message };
+  return { ok: true, message, missingCourses: r.missingCourses };
 }
 
 export type RosterActionState = { ok: boolean; message: string } | null;
