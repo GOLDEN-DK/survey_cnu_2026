@@ -105,6 +105,9 @@ model Enrollment {
   name        String // 수강생 이름
   phone       String // 정규화된 연락처 (숫자만, 예: 01012345678)
   gender      String? // "남" / "여"
+  birthDate   String?    @map("birth_date") // 생년월일 원본 (YYYYMMDD) — 연령대 통계
+  address     String? // 주소 원본 — 지역 통계
+  email       String? // 이메일 원본
   respondedAt DateTime?  @map("responded_at") // 과목별 1회 — 응답 완료 표시(빠른 조회용)
   survey      Survey     @relation(fields: [surveyId], references: [id], onDelete: Cascade)
   course      Course     @relation(fields: [courseId], references: [id], onDelete: Cascade)
@@ -124,9 +127,11 @@ model Response {
   userAgent        String?     @map("user_agent") // 통계용(PC/모바일 비율 등)
   enrollmentId     String?     @unique @map("enrollment_id") // 과목별 1회 보장
   courseId         String?     @map("course_id")
-  respondentName   String?     @map("respondent_name") // 실명 추적 (정책 결정)
-  respondentPhone  String?     @map("respondent_phone")
-  respondentGender String?     @map("respondent_gender") // 성별 통계
+  respondentName    String?     @map("respondent_name") // 실명 추적 (정책 결정)
+  respondentPhone   String?     @map("respondent_phone")
+  respondentGender  String?     @map("respondent_gender") // 성별 통계
+  respondentBirth   String?     @map("respondent_birth") // 생년월일 스냅샷 — 연령대 통계
+  respondentAddress String?     @map("respondent_address") // 주소 스냅샷 — 지역 통계
   survey           Survey      @relation(fields: [surveyId], references: [id], onDelete: Cascade)
   enrollment       Enrollment? @relation(fields: [enrollmentId], references: [id], onDelete: SetNull)
   course           Course?     @relation(fields: [courseId], references: [id], onDelete: SetNull)

@@ -12,10 +12,13 @@ export type ParsedCourse = {
 };
 
 export type ParsedEnrollment = {
-  courseName: string; // 교과목명
-  name: string; // 수강생 이름
+  courseName: string; // 교과목명(과목명)
+  name: string; // 수강생 이름(성명)
   phone: string; // 정규화된 연락처(숫자만)
   gender: string | null; // "남"/"여"
+  birthDate: string | null; // 생년월일(숫자만, YYYYMMDD)
+  address: string | null; // 주소 원본
+  email: string | null; // 이메일 원본
 };
 
 type Cell = string | number | boolean | null | undefined;
@@ -46,6 +49,24 @@ function colOf(header: Row, keyword: string): number {
   return header.findIndex((c) => text(c).includes(keyword));
 }
 
+// 여러 후보 키워드 중 먼저 매칭되는 컬럼 인덱스 (신·구 형식 컬럼명 호환).
+function colOfAny(header: Row, keywords: string[]): number {
+  for (const k of keywords) {
+    const i = header.findIndex((c) => text(c).includes(k));
+    if (i >= 0) return i;
+  }
+  return -1;
+}
+
+// 각 그룹(OR 후보)을 모두 충족하는 첫 행을 헤더로 본다.
+function findHeaderRowAny(rows: Row[], groups: string[][]): number {
+  for (let i = 0; i < Math.min(rows.length, 15); i++) {
+    const joined = rows[i].map(text).join("|");
+    if (groups.every((g) => g.some((k) => joined.includes(k)))) return i;
+  }
+  return -1;
+}
+
 // "권택호 : \n(화19:00~21:00)" → { professor: "권택호", schedule: "화19:00~21:00" }
 function parseProfessor(cell: string): { professor: string; schedule: string | null } {
   const raw = cell.replace(/\r/g, "");
@@ -65,6 +86,12 @@ function parseProfessor(cell: string): { professor: string; schedule: string | n
 // 연락처에서 숫자만 남긴다 (010-1234-5678 → 01012345678).
 export function normalizePhone(s: string): string {
   return text(s).replace(/\D/g, "");
+}
+
+// 생년월일에서 숫자만 남긴다 (1972-12-13 → 19721213). 빈 값은 null.
+function normalizeBirth(s: string): string | null {
+  const d = text(s).replace(/\D/g, "");
+  return d || null;
 }
 
 export function parseCoursesXls(buf: ArrayBuffer): ParsedCourse[] {
@@ -100,18 +127,28 @@ export function parseCoursesXls(buf: ArrayBuffer): ParsedCourse[] {
   return out;
 }
 
+// 수강생 명단 파싱 — 새 형식(과목명·성명·ID·성별·핸드폰번호·생년월일·주소·이메일) 기준.
+// 컬럼명은 구 형식(교과목명·이름·연락처)도 견디도록 후보 키워드로 탐지한다.
 export function parseEnrollmentsXls(buf: ArrayBuffer): ParsedEnrollment[] {
   const rows = readRows(buf);
-  const h = findHeaderRow(rows, ["교과목명", "이름", "연락처"]);
-  if (h < 0) throw new Error("수강생 명단 파일에서 '교과목명/이름/연락처' 헤더를 찾지 못했습니다.");
+  const h = findHeaderRowAny(rows, [
+    ["과목명", "교과목명"],
+    ["성명", "이름"],
+    ["핸드폰", "연락처", "전화"],
+  ]);
+  if (h < 0)
+    throw new Error("수강생 명단 파일에서 '과목명/성명/핸드폰번호' 헤더를 찾지 못했습니다.");
 
   const header = rows[h];
-  const cCourse = colOf(header, "교과목명");
-  const cName = colOf(header, "이름");
-  const cGender = colOf(header, "성별");
-  const cPhone = colOf(header, "연락처");
+  const cCourse = colOfAny(header, ["과목명", "교과목명"]);
+  const cName = colOfAny(header, ["성명", "이름"]);
+  const cGender = colOfAny(header, ["성별"]);
+  const cPhone = colOfAny(header, ["핸드폰", "연락처", "전화"]);
+  const cBirth = colOfAny(header, ["생년월일", "생일"]);
+  const cAddr = colOfAny(header, ["주소"]);
+  const cEmail = colOfAny(header, ["이메일", "메일", "email", "E-mail"]);
   if (cCourse < 0 || cName < 0 || cPhone < 0) {
-    throw new Error("수강생 명단의 교과목명/이름/연락처 컬럼을 찾지 못했습니다.");
+    throw new Error("수강생 명단의 과목명/성명/핸드폰번호 컬럼을 찾지 못했습니다.");
   }
 
   const out: ParsedEnrollment[] = [];
@@ -125,6 +162,9 @@ export function parseEnrollmentsXls(buf: ArrayBuffer): ParsedEnrollment[] {
       name,
       phone,
       gender: cGender >= 0 ? text(rows[i][cGender]) || null : null,
+      birthDate: cBirth >= 0 ? normalizeBirth(text(rows[i][cBirth])) : null,
+      address: cAddr >= 0 ? text(rows[i][cAddr]) || null : null,
+      email: cEmail >= 0 ? text(rows[i][cEmail]) || null : null,
     });
   }
   if (out.length === 0) throw new Error("수강생 명단 데이터 행이 없습니다.");

@@ -61,6 +61,8 @@ export async function submitResponse(
     respondentName: string;
     respondentPhone: string;
     respondentGender: string | null;
+    respondentBirth: string | null;
+    respondentAddress: string | null;
   } | null = null;
 
   if (requireRoster) {
@@ -89,6 +91,8 @@ export async function submitResponse(
       respondentName: e.name,
       respondentPhone: e.phone,
       respondentGender: e.gender,
+      respondentBirth: e.birthDate,
+      respondentAddress: e.address,
     };
   }
 

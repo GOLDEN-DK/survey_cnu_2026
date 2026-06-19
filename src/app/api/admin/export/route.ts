@@ -5,7 +5,8 @@ import { type NextRequest } from "next/server";
 import ExcelJS from "exceljs";
 import { prisma } from "@/lib/prisma";
 import { getSurveyBySlug } from "@/lib/survey-data";
-import { getDashboardStats } from "@/lib/admin-stats";
+import { getDashboardStats, getRosterDemographics } from "@/lib/admin-stats";
+import { ageBandOf, regionOf } from "@/lib/demographics";
 import { verifySessionToken, COOKIE_NAME } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
@@ -39,6 +40,10 @@ export async function GET(req: NextRequest) {
     "성함",
     "연락처",
     "성별",
+    "생년월일",
+    "연령대",
+    "주소",
+    "지역",
     "강좌",
     "교수",
     "시간대",
@@ -68,6 +73,10 @@ export async function GET(req: NextRequest) {
       r.respondentName ?? "",
       r.respondentPhone ?? "",
       r.respondentGender ?? "",
+      r.respondentBirth ?? "",
+      r.respondentBirth ? ageBandOf(r.respondentBirth) : "",
+      r.respondentAddress ?? "",
+      r.respondentAddress ? regionOf(r.respondentAddress) : "",
       r.course?.name ?? "",
       r.course?.professor ?? "",
       r.course?.dayNight ?? "",
@@ -122,6 +131,51 @@ export async function GET(req: NextRequest) {
   distHeader.font = { bold: true };
   for (const s of stats?.scales ?? []) {
     ws2.addRow([`${s.code} ${s.text}`, Number(s.avg.toFixed(2)), ...s.dist]);
+  }
+
+  // 응답자 연령대·지역별 만족도
+  ws2.addRow([]);
+  const ageHdr = ws2.addRow(["연령대(응답자)", "응답 수", "평균"]);
+  ageHdr.font = { bold: true };
+  for (const g of stats?.byAgeBand ?? []) {
+    ws2.addRow([g.name, g.count, Number(g.avg.toFixed(2))]);
+  }
+  ws2.addRow([]);
+  const regionHdr = ws2.addRow(["지역(응답자)", "응답 수", "평균"]);
+  regionHdr.font = { bold: true };
+  for (const g of stats?.byRegion ?? []) {
+    ws2.addRow([g.name, g.count, Number(g.avg.toFixed(2))]);
+  }
+
+  // 전체 수강생 명단 인구통계 (응답 여부 무관)
+  const demo = await getRosterDemographics(slug);
+  if (demo) {
+    const ws3 = wb.addWorksheet("수강생 인구통계");
+    ws3.addRow(["전체 수강생 수", demo.total]);
+    ws3.addRow([]);
+    const gh = ws3.addRow(["성별", "인원"]);
+    gh.font = { bold: true };
+    for (const d of demo.byGender) ws3.addRow([d.name, d.count]);
+    ws3.addRow([]);
+    const ah = ws3.addRow(["연령대", "인원"]);
+    ah.font = { bold: true };
+    for (const d of demo.byAgeBand) ws3.addRow([d.name, d.count]);
+    ws3.addRow([]);
+    const rh = ws3.addRow(["지역", "인원"]);
+    rh.font = { bold: true };
+    for (const d of demo.byRegion) ws3.addRow([d.name, d.count]);
+    ws3.addRow([]);
+    const m = demo.genderAge;
+    const mh = ws3.addRow(["성별＼연령대", ...m.colLabels, "계"]);
+    mh.font = { bold: true };
+    m.rowLabels.forEach((rl, i) => {
+      ws3.addRow([rl, ...m.counts[i], m.rowTotals[i]]);
+    });
+    ws3.addRow([
+      "계",
+      ...m.colTotals,
+      m.rowTotals.reduce((s, n) => s + n, 0),
+    ]);
   }
 
   const buf = await wb.xlsx.writeBuffer();

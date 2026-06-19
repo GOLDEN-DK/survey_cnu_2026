@@ -2,6 +2,12 @@
 
 import { prisma } from "./prisma";
 import { getSurveyBySlug } from "./survey-data";
+import {
+  ageBandOf,
+  regionOf,
+  AGE_BAND_ORDER,
+  REGION_ORDER,
+} from "./demographics";
 
 export type ScaleStat = {
   code: string;
@@ -28,6 +34,8 @@ export type DashboardStats = {
   choices: ChoiceStat[];
   byTime: GroupStat[]; // 명단 기반 시간대(주간/야간)
   byGender: GroupStat[]; // 명단 기반 성별 분포·만족도
+  byAgeBand: GroupStat[]; // 응답자 연령대별 만족도
+  byRegion: GroupStat[]; // 응답자 지역별 만족도
   byCourseEnrolled: GroupStat[]; // 명단 기반 정확한 강좌별 만족도
   byProfessor: GroupStat[]; // 교수별 만족도
 };
@@ -35,9 +43,20 @@ export type DashboardStats = {
 type ResponseWithAnswers = {
   submittedAt: Date;
   respondentGender: string | null;
+  respondentBirth: string | null;
+  respondentAddress: string | null;
   course: { name: string; professor: string; dayNight: string | null } | null;
   answers: { questionId: string; valueText: string | null; valueNumber: number | null }[];
 };
+
+// GroupStat 배열을 지정된 라벨 순서로 정렬한다(연령대·지역 고정 순서 표시용).
+function sortByOrder(stats: GroupStat[], order: readonly string[]): GroupStat[] {
+  const idx = (n: string) => {
+    const i = order.indexOf(n);
+    return i < 0 ? order.length : i;
+  };
+  return [...stats].sort((a, b) => idx(a.name) - idx(b.name));
+}
 
 // 응답을 임의 키(성별/강좌/교수/시간대 등)로 묶어 응답 수와 척도 전체 평균을 낸다.
 function groupBy(
@@ -155,6 +174,14 @@ export async function getDashboardStats(
     (r) => r.respondentGender?.trim() || "(미상)",
     scaleIds,
   );
+  const byAgeBand = sortByOrder(
+    groupBy(responses, (r) => ageBandOf(r.respondentBirth), scaleIds),
+    AGE_BAND_ORDER,
+  );
+  const byRegion = sortByOrder(
+    groupBy(responses, (r) => regionOf(r.respondentAddress), scaleIds),
+    REGION_ORDER,
+  );
   const byTime = groupBy(
     responses,
     (r) => r.course?.dayNight?.trim() || "(미상)",
@@ -179,8 +206,86 @@ export async function getDashboardStats(
     choices,
     byTime,
     byGender,
+    byAgeBand,
+    byRegion,
     byCourseEnrolled,
     byProfessor,
+  };
+}
+
+export type DistItem = { name: string; count: number };
+
+export type GenderAgeMatrix = {
+  rowLabels: string[]; // 성별 (남/여/미상)
+  colLabels: string[]; // 연령대
+  counts: number[][]; // [성별][연령대]
+  rowTotals: number[];
+  colTotals: number[];
+};
+
+export type RosterDemographics = {
+  total: number;
+  byGender: DistItem[];
+  byAgeBand: DistItem[];
+  byRegion: DistItem[];
+  genderAge: GenderAgeMatrix;
+};
+
+const GENDER_ORDER = ["남", "여", "미상"] as const;
+
+// 전체 수강생 명단(응답 여부 무관)의 인구 구성 — 성별·연령대·지역 분포 + 성별×연령대 교차.
+export async function getRosterDemographics(
+  slug: string,
+): Promise<RosterDemographics | null> {
+  const survey = await getSurveyBySlug(slug);
+  if (!survey) return null;
+
+  const enrollments = await prisma.enrollment.findMany({
+    where: { surveyId: survey.id },
+    select: { gender: true, birthDate: true, address: true },
+  });
+
+  const genderMap = new Map<string, number>();
+  const ageMap = new Map<string, number>();
+  const regionMap = new Map<string, number>();
+  const cross = new Map<string, number>(); // `${성별}|${연령대}`
+
+  for (const e of enrollments) {
+    const g = e.gender?.trim() || "미상";
+    const ab = ageBandOf(e.birthDate);
+    const rg = regionOf(e.address);
+    genderMap.set(g, (genderMap.get(g) ?? 0) + 1);
+    ageMap.set(ab, (ageMap.get(ab) ?? 0) + 1);
+    regionMap.set(rg, (regionMap.get(rg) ?? 0) + 1);
+    const k = `${g}|${ab}`;
+    cross.set(k, (cross.get(k) ?? 0) + 1);
+  }
+
+  const toDist = (map: Map<string, number>, order: readonly string[]): DistItem[] =>
+    [...map.entries()]
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => {
+        const ia = order.indexOf(a.name);
+        const ib = order.indexOf(b.name);
+        return (ia < 0 ? order.length : ia) - (ib < 0 ? order.length : ib);
+      });
+
+  const rowLabels = GENDER_ORDER.filter((g) => genderMap.has(g));
+  const colLabels = AGE_BAND_ORDER.filter((a) => ageMap.has(a));
+  const counts = rowLabels.map((r) =>
+    colLabels.map((c) => cross.get(`${r}|${c}`) ?? 0),
+  );
+  const rowTotals = counts.map((row) => row.reduce((s, n) => s + n, 0));
+  const colTotals = colLabels.map((_, j) =>
+    counts.reduce((s, row) => s + row[j], 0),
+  );
+
+  return {
+    total: enrollments.length,
+    byGender: toDist(genderMap, GENDER_ORDER),
+    byAgeBand: toDist(ageMap, AGE_BAND_ORDER),
+    byRegion: toDist(regionMap, REGION_ORDER),
+    genderAge: { rowLabels: [...rowLabels], colLabels: [...colLabels], counts, rowTotals, colTotals },
   };
 }
 

@@ -8,6 +8,7 @@ import { verifySessionToken, COOKIE_NAME } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getSurveyBySlug } from "@/lib/survey-data";
 import { parseCoursesXls, parseEnrollmentsXls } from "@/lib/xlsx-import";
+import { applyEnrollments } from "@/lib/enrollment-import";
 
 export type UploadState = { ok: boolean; message: string } | null;
 
@@ -88,50 +89,20 @@ export async function uploadEnrollments(
     return { ok: false, message: e instanceof Error ? e.message : "파일을 읽을 수 없습니다." };
   }
 
-  const courses = await prisma.course.findMany({
-    where: { surveyId: survey.id },
-    select: { id: true, name: true },
-  });
-  if (courses.length === 0) {
+  const courseCount = await prisma.course.count({ where: { surveyId: survey.id } });
+  if (courseCount === 0) {
     return {
       ok: false,
       message: "먼저 설강과목 파일을 업로드해 주세요. (교과목명으로 강좌를 연결합니다)",
     };
   }
-  const courseByName = new Map(courses.map((c) => [c.name, c.id]));
 
-  const data: {
-    surveyId: string;
-    courseId: string;
-    name: string;
-    phone: string;
-    gender: string | null;
-  }[] = [];
-  const missing = new Set<string>();
-  for (const e of parsed) {
-    const courseId = courseByName.get(e.courseName);
-    if (!courseId) {
-      missing.add(e.courseName);
-      continue;
-    }
-    data.push({
-      surveyId: survey.id,
-      courseId,
-      name: e.name,
-      phone: e.phone,
-      gender: e.gender,
-    });
-  }
+  const r = await applyEnrollments(survey.id, parsed);
 
-  const result = await prisma.enrollment.createMany({
-    data,
-    skipDuplicates: true,
-  });
-
-  revalidatePath(`/admin/s/${slug}/upload`);
-  let message = `수강생 명단 처리 완료 — 신규 ${result.count}건 추가 (전체 ${data.length}건 중 기존 ${data.length - result.count}건은 유지).`;
-  if (missing.size > 0) {
-    message += ` 설강과목에 없는 교과목 ${missing.size}종은 제외했습니다.`;
+  revalidateRoster(slug);
+  let message = `수강생 명단 반영 완료 — 신규 ${r.created}건 추가, 정보 갱신 ${r.updated}건 (조인 ${r.total}건).`;
+  if (r.missingCourses.length > 0) {
+    message += ` 설강과목에 없는 교과목 ${r.missingCourses.length}종은 제외했습니다.`;
   }
   return { ok: true, message };
 }

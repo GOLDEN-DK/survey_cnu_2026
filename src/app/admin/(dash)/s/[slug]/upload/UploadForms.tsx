@@ -12,12 +12,14 @@ function UploadCard({
   hint,
   action,
   slug,
+  templateType,
 }: {
   step: number;
   title: string;
   hint: string;
   action: Action;
   slug: string;
+  templateType: "enrollment" | "course";
 }) {
   const [state, formAction, pending] = useActionState<UploadState, FormData>(
     action,
@@ -34,6 +36,12 @@ function UploadCard({
           {step}. {title}
         </h3>
         <p className="mt-1 text-sm text-ink-soft">{hint}</p>
+        <a
+          href={`/api/admin/roster-template?type=${templateType}`}
+          className="mt-2 inline-block text-sm font-medium text-brand hover:underline"
+        >
+          ↓ 양식 템플릿 다운로드
+        </a>
       </div>
       <input
         type="file"
@@ -70,13 +78,15 @@ export function UploadForms({ slug }: { slug: string }) {
         hint="교과목명·담당교수가 담긴 파일. 교과목명 기준으로 갱신(upsert)됩니다."
         action={uploadCourses}
         slug={slug}
+        templateType="course"
       />
       <UploadCard
         step={2}
         title="수강생 명단 업로드"
-        hint="이름·연락처·성별이 담긴 파일. 설강과목을 먼저 올린 뒤 진행하세요. 기존 명단은 유지하고 신규만 추가합니다."
+        hint="과목명·성명·성별·핸드폰번호·생년월일·주소·이메일이 담긴 파일(새 양식). 설강과목을 먼저 올린 뒤 진행하세요. 기존 명단은 정보가 갱신되고 신규만 추가됩니다."
         action={uploadEnrollments}
         slug={slug}
+        templateType="enrollment"
       />
     </div>
   );
