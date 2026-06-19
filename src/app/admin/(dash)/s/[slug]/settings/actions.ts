@@ -23,10 +23,21 @@ export async function updateSchedule(
   await requireAdmin();
 
   const slug = String(formData.get("slug") ?? "");
+  const title = String(formData.get("title") ?? "").trim();
   const rawStatus = String(formData.get("status") ?? "");
   const startStr = String(formData.get("startAt") ?? "");
   const endStr = String(formData.get("endAt") ?? "");
   const description = String(formData.get("description") ?? "").trim();
+
+  if (!title) {
+    return { ok: false, message: "설문 제목을 입력해 주세요." };
+  }
+  if (title.length > 120) {
+    return {
+      ok: false,
+      message: "설문 제목이 너무 깁니다. (120자 이내로 입력해 주세요)",
+    };
+  }
 
   const status = STATUSES.find((s) => s === rawStatus);
   if (!status) {
@@ -52,6 +63,7 @@ export async function updateSchedule(
   await prisma.survey.update({
     where: { slug },
     data: {
+      title,
       status: status as Status,
       startAt,
       endAt,
@@ -59,6 +71,7 @@ export async function updateSchedule(
     },
   });
 
+  revalidatePath(`/admin/s/${slug}`);
   revalidatePath(`/admin/s/${slug}/settings`);
   revalidatePath(`/s/${slug}`);
   return { ok: true, message: "설문 설정을 저장했습니다." };

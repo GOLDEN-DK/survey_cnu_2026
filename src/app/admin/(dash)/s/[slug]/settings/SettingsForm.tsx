@@ -6,6 +6,7 @@ import { updateSchedule, type ScheduleState } from "./actions";
 
 type Props = {
   slug: string;
+  title: string;
   status: string;
   startAt: string;
   endAt: string;
@@ -14,6 +15,7 @@ type Props = {
 
 export function SettingsForm({
   slug,
+  title,
   status,
   startAt,
   endAt,
@@ -30,6 +32,17 @@ export function SettingsForm({
       className="flex max-w-md flex-col gap-4 rounded-xl border border-line bg-white p-4"
     >
       <input type="hidden" name="slug" value={slug} />
+      <label className="flex flex-col gap-1">
+        <span className="text-sm font-semibold text-ink">설문 제목</span>
+        <input
+          type="text"
+          name="title"
+          defaultValue={title}
+          maxLength={120}
+          className="rounded-lg border border-line bg-white px-3 py-2 text-sm text-ink"
+        />
+      </label>
+
       <label className="flex flex-col gap-1">
         <span className="text-sm font-semibold text-ink">공개 상태</span>
         <select

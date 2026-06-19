@@ -53,6 +53,7 @@ export default async function SettingsPage({
 
       <SettingsForm
         slug={slug}
+        title={survey.title}
         status={survey.status}
         startAt={toKSTDate(survey.startAt)}
         endAt={toKSTDate(survey.endAt)}
