@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { getSurveyBySlug } from "@/lib/survey-data";
 import { UploadForms } from "./UploadForms";
+import { RosterList } from "./RosterList";
 
 export const dynamic = "force-dynamic";
 
@@ -35,6 +36,24 @@ export default async function UploadPage({
       }
     : { courses: 0, enrollments: 0, responded: 0 };
 
+  const roster = survey
+    ? (
+        await prisma.enrollment.findMany({
+          where: { surveyId: survey.id },
+          include: { course: { select: { name: true, professor: true } } },
+          orderBy: [{ course: { orderNo: "asc" } }, { name: "asc" }],
+        })
+      ).map((e) => ({
+        id: e.id,
+        name: e.name,
+        phone: e.phone,
+        gender: e.gender,
+        courseName: e.course.name,
+        professor: e.course.professor,
+        responded: e.respondedAt != null,
+      }))
+    : [];
+
   return (
     <div className="flex flex-col gap-6">
       <section>
@@ -55,6 +74,10 @@ export default async function UploadPage({
 
       <section>
         <UploadForms slug={slug} />
+      </section>
+
+      <section>
+        <RosterList slug={slug} roster={roster} />
       </section>
 
       <p className="text-sm text-ink-soft">

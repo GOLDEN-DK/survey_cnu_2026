@@ -135,3 +135,79 @@ export async function uploadEnrollments(
   }
   return { ok: true, message };
 }
+
+export type RosterActionState = { ok: boolean; message: string } | null;
+
+// 응답자 관리 후 영향받는 화면 캐시를 무효화한다.
+function revalidateRoster(slug: string): void {
+  revalidatePath(`/admin/s/${slug}/upload`);
+  revalidatePath(`/admin/s/${slug}`);
+  revalidatePath(`/admin/s/${slug}/courses`);
+  revalidatePath(`/admin/s/${slug}/comments`);
+}
+
+// 개별 리셋 — 응답(Response+Answer)을 삭제하고 완료 표시를 해제해 재응답을 허용한다(명단 유지).
+export async function resetEnrollment(
+  _prev: RosterActionState,
+  formData: FormData,
+): Promise<RosterActionState> {
+  await requireAdmin();
+  const slug = String(formData.get("slug") ?? "");
+  const enrollmentId = String(formData.get("enrollmentId") ?? "");
+  if (!enrollmentId) return { ok: false, message: "대상이 없습니다." };
+
+  await prisma.$transaction([
+    prisma.response.deleteMany({ where: { enrollmentId } }),
+    prisma.enrollment.update({
+      where: { id: enrollmentId },
+      data: { respondedAt: null },
+    }),
+  ]);
+
+  revalidateRoster(slug);
+  return { ok: true, message: "응답을 초기화했습니다(재응답 가능)." };
+}
+
+// 개별 삭제 — 응답을 삭제하고 수강생을 명단(enrollment)에서 제거한다.
+export async function deleteEnrollment(
+  _prev: RosterActionState,
+  formData: FormData,
+): Promise<RosterActionState> {
+  await requireAdmin();
+  const slug = String(formData.get("slug") ?? "");
+  const enrollmentId = String(formData.get("enrollmentId") ?? "");
+  if (!enrollmentId) return { ok: false, message: "대상이 없습니다." };
+
+  await prisma.$transaction([
+    prisma.response.deleteMany({ where: { enrollmentId } }),
+    prisma.enrollment.delete({ where: { id: enrollmentId } }),
+  ]);
+
+  revalidateRoster(slug);
+  return { ok: true, message: "명단에서 제거했습니다." };
+}
+
+// 전체 응답 초기화 — 설문의 모든 응답을 삭제하고 완료 표시를 해제한다(명단 유지).
+export async function resetAllResponses(
+  _prev: RosterActionState,
+  formData: FormData,
+): Promise<RosterActionState> {
+  await requireAdmin();
+  const slug = String(formData.get("slug") ?? "");
+  const survey = await getSurveyBySlug(slug);
+  if (!survey) return { ok: false, message: "설문을 찾을 수 없습니다." };
+
+  const [deleted] = await prisma.$transaction([
+    prisma.response.deleteMany({ where: { surveyId: survey.id } }),
+    prisma.enrollment.updateMany({
+      where: { surveyId: survey.id },
+      data: { respondedAt: null },
+    }),
+  ]);
+
+  revalidateRoster(slug);
+  return {
+    ok: true,
+    message: `전체 응답 ${deleted.count}건을 삭제하고 초기화했습니다.`,
+  };
+}
