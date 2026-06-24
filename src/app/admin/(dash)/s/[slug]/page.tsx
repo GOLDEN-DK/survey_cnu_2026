@@ -9,6 +9,7 @@ import {
   type GenderAgeMatrix,
 } from "@/lib/admin-stats";
 import { DateChart, ScaleAvgChart } from "@/components/admin/charts";
+import { ScaleTable } from "@/components/admin/scale-table";
 
 export const dynamic = "force-dynamic";
 
@@ -238,41 +239,15 @@ export default async function DashboardPage({
         <h2 className="mb-3 text-xl font-bold text-ink">문항별 만족도 평균</h2>
         <div className="rounded-xl border border-line bg-white p-4">
           <ScaleAvgChart
-            data={stats!.scales.map((s) => ({ code: s.code, avg: s.avg }))}
+            data={stats!.scales.map((s) => ({
+              no: s.no,
+              text: s.text,
+              avg: s.avg,
+            }))}
           />
         </div>
-        <div className="mt-3 overflow-x-auto rounded-xl border border-line bg-white p-4">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-line text-left text-ink-soft">
-                <th className="py-1">문항</th>
-                <th className="py-1 text-right">평균</th>
-                <th className="py-1 text-right">①</th>
-                <th className="py-1 text-right">②</th>
-                <th className="py-1 text-right">③</th>
-                <th className="py-1 text-right">④</th>
-                <th className="py-1 text-right">⑤</th>
-              </tr>
-            </thead>
-            <tbody>
-              {stats!.scales.map((s) => (
-                <tr key={s.code} className="border-b border-line/50">
-                  <td className="py-1 text-ink">
-                    <span className="font-semibold">{s.code}</span>{" "}
-                    <span className="text-ink-soft">{s.text}</span>
-                  </td>
-                  <td className="py-1 text-right font-semibold text-ink">
-                    {s.avg.toFixed(2)}
-                  </td>
-                  {s.dist.map((n, i) => (
-                    <td key={i} className="py-1 text-right text-ink-soft">
-                      {n}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="mt-3">
+          <ScaleTable scales={stats!.scales} />
         </div>
       </section>
 

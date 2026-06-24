@@ -10,6 +10,7 @@ import {
 } from "./demographics";
 
 export type ScaleStat = {
+  no: number; // 코드 순 정렬 후 부여하는 1..N 일련번호 (화면 표시용)
   code: string;
   text: string;
   scaleSet: string | null;
@@ -82,6 +83,62 @@ function groupBy(
     .sort((a, b) => b.count - a.count);
 }
 
+// 코드(B1·C2…)를 [섹션문자, 숫자]로 분해 — 코드 순 자연정렬용("B10" → ["B", 10]).
+function scaleOrderKey(code: string): [string, number] {
+  const m = /^([A-Za-z]+)(\d+)$/.exec(code);
+  return m ? [m[1], Number(m[2])] : [code, 0];
+}
+
+// 척도(scale_5) 문항별 평균·분포를 계산하고, 코드 순으로 정렬해 1..N 일련번호를 부여한다.
+function computeScales(
+  questions: {
+    id: string;
+    code: string;
+    text: string;
+    scaleSet: string | null;
+    type: string;
+  }[],
+  responses: { answers: { questionId: string; valueNumber: number | null }[] }[],
+): ScaleStat[] {
+  const scales: ScaleStat[] = questions
+    .filter((q) => q.type === "scale_5")
+    .map((q) => {
+      const dist = [0, 0, 0, 0, 0];
+      let sum = 0;
+      let count = 0;
+      for (const r of responses) {
+        for (const a of r.answers) {
+          if (a.questionId === q.id && a.valueNumber != null) {
+            const v = a.valueNumber;
+            if (v >= 1 && v <= 5) {
+              dist[v - 1]++;
+              sum += v;
+              count++;
+            }
+          }
+        }
+      }
+      return {
+        no: 0,
+        code: q.code,
+        text: q.text,
+        scaleSet: q.scaleSet,
+        count,
+        avg: count ? sum / count : 0,
+        dist,
+      };
+    });
+  scales.sort((a, b) => {
+    const [sa, na] = scaleOrderKey(a.code);
+    const [sb, nb] = scaleOrderKey(b.code);
+    return sa !== sb ? (sa < sb ? -1 : 1) : na - nb;
+  });
+  scales.forEach((s, i) => {
+    s.no = i + 1;
+  });
+  return scales;
+}
+
 export async function getDashboardStats(
   slug: string,
 ): Promise<DashboardStats | null> {
@@ -112,34 +169,8 @@ export async function getDashboardStats(
     .map(([date, count]) => ({ date, count }))
     .sort((a, b) => a.date.localeCompare(b.date));
 
-  // 척도 문항별 평균·분포
-  const scales: ScaleStat[] = survey.questions
-    .filter((q) => q.type === "scale_5")
-    .map((q) => {
-      const dist = [0, 0, 0, 0, 0];
-      let sum = 0;
-      let count = 0;
-      for (const r of responses) {
-        for (const a of r.answers) {
-          if (a.questionId === q.id && a.valueNumber != null) {
-            const v = a.valueNumber;
-            if (v >= 1 && v <= 5) {
-              dist[v - 1]++;
-              sum += v;
-              count++;
-            }
-          }
-        }
-      }
-      return {
-        code: q.code,
-        text: q.text,
-        scaleSet: q.scaleSet,
-        count,
-        avg: count ? sum / count : 0,
-        dist,
-      };
-    });
+  // 척도 문항별 평균·분포 (코드 순 정렬 + 일련번호)
+  const scales = computeScales(survey.questions, responses);
 
   const allSum = scales.reduce((s, x) => s + x.avg * x.count, 0);
   const allCount = scales.reduce((s, x) => s + x.count, 0);
@@ -211,6 +242,62 @@ export async function getDashboardStats(
     byCourseEnrolled,
     byProfessor,
   };
+}
+
+export type CourseBreakdown = {
+  name: string;
+  professor: string | null;
+  total: number;
+  overallAvg: number;
+  scales: ScaleStat[];
+};
+
+// 강좌(course)별 문항 만족도 — 강좌마다 척도 문항별 평균·분포를 따로 집계한다.
+// 모든 강좌 통계를 한 번에 계산해 반환하면, 화면에서는 드롭다운으로 즉시 전환할 수 있다.
+export async function getCourseBreakdown(
+  slug: string,
+): Promise<CourseBreakdown[]> {
+  const survey = await getSurveyBySlug(slug);
+  if (!survey) return [];
+
+  const responses = await prisma.response.findMany({
+    where: { surveyId: survey.id },
+    include: {
+      answers: true,
+      course: { select: { name: true, professor: true } },
+    },
+    orderBy: { submittedAt: "asc" },
+  });
+
+  const groups = new Map<
+    string,
+    { professor: string | null; rows: typeof responses }
+  >();
+  for (const r of responses) {
+    const name = r.course?.name ?? "(미지정)";
+    const g = groups.get(name) ?? {
+      professor: r.course?.professor ?? null,
+      rows: [],
+    };
+    g.rows.push(r);
+    groups.set(name, g);
+  }
+
+  const result: CourseBreakdown[] = [...groups.entries()].map(([name, g]) => {
+    const scales = computeScales(survey.questions, g.rows);
+    const allSum = scales.reduce((s, x) => s + x.avg * x.count, 0);
+    const allCount = scales.reduce((s, x) => s + x.count, 0);
+    return {
+      name,
+      professor: g.professor,
+      total: g.rows.length,
+      overallAvg: allCount ? allSum / allCount : 0,
+      scales,
+    };
+  });
+
+  result.sort((a, b) => b.total - a.total);
+  return result;
 }
 
 export type DistItem = { name: string; count: number };
