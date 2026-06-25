@@ -543,3 +543,84 @@ export async function getFailedSubmissions(
     };
   });
 }
+
+// 실시간 제출 현황 — 성공(Response)·실패(FailedSubmission)를 시각 내림차순으로 병합한 최근 제출.
+export type RecentSubmission = {
+  id: string;
+  name: string | null;
+  phone: string | null; // 숫자만 저장 — 화면에서 formatPhone으로 표시
+  courseName: string | null;
+  status: "success" | "failed";
+  at: string; // ISO 문자열(제출/실패 시각)
+};
+
+export async function getRecentSubmissions(
+  slug: string,
+  limit = 5,
+): Promise<RecentSubmission[]> {
+  const survey = await getSurveyBySlug(slug);
+  if (!survey) return [];
+
+  const [responses, failed] = await Promise.all([
+    prisma.response.findMany({
+      where: { surveyId: survey.id },
+      orderBy: { submittedAt: "desc" },
+      take: limit,
+      select: {
+        id: true,
+        respondentName: true,
+        respondentPhone: true,
+        submittedAt: true,
+        course: { select: { name: true } },
+      },
+    }),
+    prisma.failedSubmission.findMany({
+      where: { surveyId: survey.id },
+      orderBy: { createdAt: "desc" },
+      take: limit,
+      select: {
+        id: true,
+        respondentName: true,
+        courseName: true,
+        enrollmentId: true,
+        createdAt: true,
+      },
+    }),
+  ]);
+
+  // 실패 기록엔 연락처 컬럼이 없어 enrollmentId로 한 번에 보강한다(없으면 빈칸).
+  const enrollmentIds = failed
+    .map((f) => f.enrollmentId)
+    .filter((id): id is string => !!id);
+  const phoneById = new Map<string, string>();
+  if (enrollmentIds.length > 0) {
+    const enrolls = await prisma.enrollment.findMany({
+      where: { id: { in: enrollmentIds } },
+      select: { id: true, phone: true },
+    });
+    for (const e of enrolls) phoneById.set(e.id, e.phone);
+  }
+
+  const merged: RecentSubmission[] = [
+    ...responses.map((r) => ({
+      id: r.id,
+      name: r.respondentName,
+      phone: r.respondentPhone,
+      courseName: r.course?.name ?? null,
+      status: "success" as const,
+      at: r.submittedAt.toISOString(),
+    })),
+    ...failed.map((f) => ({
+      id: f.id,
+      name: f.respondentName,
+      phone: f.enrollmentId ? phoneById.get(f.enrollmentId) ?? null : null,
+      courseName: f.courseName,
+      status: "failed" as const,
+      at: f.createdAt.toISOString(),
+    })),
+  ];
+
+  // ISO 문자열은 사전순이 곧 시간순 — 최신이 위로 오게 내림차순 정렬.
+  merged.sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : 0));
+  return merged.slice(0, limit);
+}

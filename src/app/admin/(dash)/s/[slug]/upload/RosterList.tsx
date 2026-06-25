@@ -3,6 +3,7 @@
 
 import { useActionState, useState } from "react";
 import Link from "next/link";
+import { formatPhone } from "@/lib/format";
 import {
   resetEnrollment,
   deleteEnrollment,
@@ -22,15 +23,6 @@ type Row = {
 };
 
 type Filter = "all" | "responded" | "pending" | "failed";
-
-// 연락처 포맷 — 01012345678 → 010-1234-5678 (마스킹 없이 전체 표시)
-function formatPhone(phone: string): string {
-  if (phone.length === 11)
-    return `${phone.slice(0, 3)}-${phone.slice(3, 7)}-${phone.slice(7)}`;
-  if (phone.length === 10)
-    return `${phone.slice(0, 3)}-${phone.slice(3, 6)}-${phone.slice(6)}`;
-  return phone;
-}
 
 const statusOf = (r: Row): Filter =>
   r.responded ? "responded" : r.failed ? "failed" : "pending";

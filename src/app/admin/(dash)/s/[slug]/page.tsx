@@ -3,6 +3,7 @@
 import {
   getDashboardStats,
   getRosterDemographics,
+  getRecentSubmissions,
   type GroupStat,
   type ChoiceStat,
   type DistItem,
@@ -10,6 +11,7 @@ import {
 } from "@/lib/admin-stats";
 import { DateChart, ScaleAvgChart } from "@/components/admin/charts";
 import { ScaleTable } from "@/components/admin/scale-table";
+import { RecentSubmissions } from "@/components/admin/recent-submissions";
 
 export const dynamic = "force-dynamic";
 
@@ -186,20 +188,23 @@ export default async function DashboardPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const [stats, demo] = await Promise.all([
+  const [stats, demo, recent] = await Promise.all([
     getDashboardStats(slug),
     getRosterDemographics(slug),
+    getRecentSubmissions(slug),
   ]);
 
   const hasResponses = !!stats && stats.total > 0;
   const hasRoster = !!demo && demo.total > 0;
 
-  if (!hasResponses && !hasRoster) {
-    return <p className="text-ink-soft">아직 수집된 응답이 없습니다.</p>;
-  }
-
   return (
     <div className="flex flex-col gap-8">
+      <RecentSubmissions key={slug} slug={slug} initial={recent} />
+
+      {!hasResponses && (
+        <p className="text-ink-soft">아직 수집된 응답이 없습니다.</p>
+      )}
+
       {hasRoster && (
         <section>
           <h2 className="mb-3 text-xl font-bold text-ink">
@@ -223,9 +228,7 @@ export default async function DashboardPage({
         </section>
       )}
 
-      {!hasResponses ? (
-        <p className="text-ink-soft">아직 수집된 응답이 없습니다.</p>
-      ) : (
+      {hasResponses && (
         <>
       <section>
         <h2 className="mb-3 text-xl font-bold text-ink">응답 현황</h2>
