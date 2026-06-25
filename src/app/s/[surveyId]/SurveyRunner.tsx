@@ -1,5 +1,5 @@
 "use client";
-// 설문 진행 컨트롤러 — 단계 이동, 중간저장(sessionStorage), 친절한 필수 검증, 제출
+// 설문 진행 컨트롤러 — 단계 이동, 중간저장(localStorage), 친절한 필수 검증, 제출
 
 import { useActionState, useEffect, useState, startTransition } from "react";
 import { useRouter } from "next/navigation";
@@ -225,9 +225,12 @@ export function SurveyRunner({ survey, respondent }: Props) {
         ))}
       </div>
       {state && !state.ok && !state.errors && (
-        <p role="alert" className="mt-4 text-body font-semibold text-danger">
-          ⚠ {state.message}
-        </p>
+        <div
+          role="alert"
+          className="mt-4 rounded-xl border-2 border-danger/40 bg-danger/5 p-4"
+        >
+          <p className="text-body font-semibold text-danger">⚠ {state.message}</p>
+        </div>
       )}
       <NavButtons
         isFirst={false}

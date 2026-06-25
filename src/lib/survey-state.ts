@@ -1,5 +1,6 @@
-// 응답 중간 저장 — sessionStorage에 답변을 보관/복원한다.
-// 새로고침·뒤로가기에는 유지되고, 탭/세션 종료 시 자동 소멸한다(공용기기 사생활 보호).
+// 응답 중간 저장 — localStorage에 답변을 보관/복원한다.
+// 입력 즉시 저장되어 새로고침·뒤로가기는 물론, 탭을 닫았다 같은 기기·브라우저로 다시 와도 복구된다.
+// 제출 완료 시 삭제한다(clearAnswers). 미완료로 이탈하면 답변이 그 기기에 남는 trade-off가 있다.
 
 import type { AnswerMap } from "./survey-types";
 
@@ -9,7 +10,7 @@ const doneKey = (surveyId: string) => `survey:done:${surveyId}`;
 export function loadAnswers(surveyId: string): AnswerMap {
   if (typeof window === "undefined") return {};
   try {
-    const raw = window.sessionStorage.getItem(answersKey(surveyId));
+    const raw = window.localStorage.getItem(answersKey(surveyId));
     return raw ? (JSON.parse(raw) as AnswerMap) : {};
   } catch {
     return {};
@@ -19,7 +20,7 @@ export function loadAnswers(surveyId: string): AnswerMap {
 export function saveAnswers(surveyId: string, answers: AnswerMap): void {
   if (typeof window === "undefined") return;
   try {
-    window.sessionStorage.setItem(answersKey(surveyId), JSON.stringify(answers));
+    window.localStorage.setItem(answersKey(surveyId), JSON.stringify(answers));
   } catch {
     // 저장 실패(용량 초과·프라이빗 모드)는 무시한다.
   }
@@ -28,7 +29,7 @@ export function saveAnswers(surveyId: string, answers: AnswerMap): void {
 export function clearAnswers(surveyId: string): void {
   if (typeof window === "undefined") return;
   try {
-    window.sessionStorage.removeItem(answersKey(surveyId));
+    window.localStorage.removeItem(answersKey(surveyId));
   } catch {
     // noop
   }
