@@ -30,6 +30,9 @@ export default async function SurveyAdminLayout({
           <Link href={`${base}/comments`} className="hover:text-brand">
             정성 응답
           </Link>
+          <Link href={`${base}/failed`} className="hover:text-brand">
+            제출 실패
+          </Link>
           <Link href={`${base}/upload`} className="hover:text-brand">
             명단 관리
           </Link>

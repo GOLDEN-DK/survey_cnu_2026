@@ -156,3 +156,19 @@ model Answer {
   @@index([questionId])
   @@map("answer")
 }
+
+/// 제출 실패 보관 — 최종 제출이 예외로 실패했을 때 작성 답변을 통째로 보존(복원·재입력용).
+/// 독립 보관이 목적이라 survey/enrollment에 FK를 걸지 않고 식별자·이름을 스냅샷으로 저장한다.
+model FailedSubmission {
+  id             String   @id @default(cuid())
+  surveyId       String   @map("survey_id")
+  enrollmentId   String?  @map("enrollment_id")
+  respondentName String?  @map("respondent_name") // 본인확인 이름 스냅샷
+  courseName     String?  @map("course_name") // 선택 강좌 스냅샷
+  answersJson    String   @map("answers_json") // 제출 payload의 answers 전체(JSON 직렬화)
+  error          String? // 예외 메시지 일부(원인 추적용)
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@index([surveyId])
+  @@map("failed_submission")
+}

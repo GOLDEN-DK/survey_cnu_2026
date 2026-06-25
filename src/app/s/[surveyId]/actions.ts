@@ -170,12 +170,30 @@ export async function submitResponse(
     ) {
       return { ok: false, message: "이미 이 강좌에 응답하셨습니다." };
     }
-    // 그 외 예외: 흰 화면 대신 안내를 반환하고, 원인 추적을 위해 서버 로그를 남긴다.
-    // (개인정보는 남기지 않는다 — surveyId·enrollmentId만)
+    // 그 외 예외: 흰 화면 대신 안내를 반환한다. 로그엔 식별자만 남긴다(본문은 DB에 보존).
     console.error(
       `[survey submit 실패] surveyId=${payload.surveyId} enrollmentId=${payload.respondent?.enrollmentId ?? "-"}`,
       err,
     );
+    // 작성 답변을 통째로 DB에 보존한다 — 사용자 환경(localStorage 불가 등)과 무관하게 살린다.
+    // 보존마저 실패해도(같은 DB 장애 등) 사용자 흐름은 막지 않는다(로그만).
+    try {
+      await prisma.failedSubmission.create({
+        data: {
+          surveyId: payload.surveyId,
+          enrollmentId: payload.respondent?.enrollmentId ?? null,
+          respondentName: payload.respondent?.name ?? null,
+          courseName: payload.respondent?.courseName ?? null,
+          answersJson: JSON.stringify(payload.answers),
+          error:
+            err instanceof Error
+              ? err.message.slice(0, 500)
+              : String(err).slice(0, 500),
+        },
+      });
+    } catch (saveErr) {
+      console.error("[survey submit 실패-보관도 실패]", saveErr);
+    }
     return {
       ok: false,
       message:

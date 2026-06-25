@@ -488,3 +488,51 @@ export async function getComments(
       text: a.valueText as string,
     }));
 }
+
+// 제출 실패 보관 — 최종 제출이 예외로 실패해 보존된 작성 답변 목록(복원·연락용)
+export type FailedSubmissionRow = {
+  id: string;
+  respondentName: string | null;
+  courseName: string | null;
+  createdAt: string;
+  error: string | null;
+  answers: Array<{
+    code: string;
+    valueText?: string;
+    valueNumber?: number;
+    multi?: string[];
+    comment?: string;
+  }>;
+};
+
+export async function getFailedSubmissions(
+  slug: string,
+): Promise<FailedSubmissionRow[]> {
+  const survey = await getSurveyBySlug(slug);
+  if (!survey) return [];
+
+  const rows = await prisma.failedSubmission.findMany({
+    where: { surveyId: survey.id },
+    orderBy: { createdAt: "desc" },
+    take: 500,
+  });
+
+  return rows.map((r) => {
+    let answers: FailedSubmissionRow["answers"] = [];
+    try {
+      answers = JSON.parse(r.answersJson) as FailedSubmissionRow["answers"];
+    } catch {
+      answers = [];
+    }
+    return {
+      id: r.id,
+      respondentName: r.respondentName,
+      courseName: r.courseName,
+      createdAt: r.createdAt.toLocaleString("ko-KR", {
+        timeZone: "Asia/Seoul",
+      }),
+      error: r.error,
+      answers,
+    };
+  });
+}
