@@ -45,17 +45,23 @@ export default async function CoursesPage({
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-line text-left text-ink-soft">
-                <th className="py-2">강좌명</th>
-                <th className="py-2 text-right">응답 수</th>
-                <th className="py-2 text-right">만족도 평균</th>
+                <th className="py-2 pr-2">강좌명</th>
+                <th className="w-20 whitespace-nowrap py-2 pl-2 text-right font-medium">
+                  응답 수
+                </th>
+                <th className="w-24 whitespace-nowrap py-2 pl-4 text-right font-medium">
+                  만족도 평균
+                </th>
               </tr>
             </thead>
             <tbody>
               {stats.byCourseEnrolled.map((c) => (
                 <tr key={c.name} className="border-b border-line/50">
-                  <td className="py-2 text-ink">{c.name}</td>
-                  <td className="py-2 text-right text-ink">{c.count}</td>
-                  <td className="py-2 text-right font-semibold text-ink">
+                  <td className="py-2 pr-2 text-ink">{c.name}</td>
+                  <td className="w-20 py-2 pl-2 text-right tabular-nums text-ink-soft">
+                    {c.count}
+                  </td>
+                  <td className="w-24 py-2 pl-4 text-right font-semibold tabular-nums text-ink">
                     {c.avg.toFixed(2)}
                   </td>
                 </tr>

@@ -29,17 +29,25 @@ function GroupTable({ title, rows }: { title: string; rows: GroupStat[] }) {
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-line text-left text-ink-soft">
-            <th className="py-1">구분</th>
-            <th className="py-1 text-right">응답 수</th>
-            <th className="py-1 text-right">평균</th>
+            <th className="py-1 pr-2">구분</th>
+            <th className="w-16 whitespace-nowrap py-1 pl-2 text-right font-medium">
+              응답 수
+            </th>
+            <th className="w-16 whitespace-nowrap py-1 pl-4 text-right font-medium">
+              평균
+            </th>
           </tr>
         </thead>
         <tbody>
           {rows.map((r) => (
             <tr key={r.name} className="border-b border-line/50">
-              <td className="py-1 text-ink">{r.name}</td>
-              <td className="py-1 text-right text-ink">{r.count}</td>
-              <td className="py-1 text-right text-ink">{r.avg.toFixed(2)}</td>
+              <td className="py-1 pr-2 text-ink">{r.name}</td>
+              <td className="w-16 py-1 pl-2 text-right tabular-nums text-ink-soft">
+                {r.count}
+              </td>
+              <td className="w-16 py-1 pl-4 text-right font-semibold tabular-nums text-ink">
+                {r.avg.toFixed(2)}
+              </td>
             </tr>
           ))}
         </tbody>
