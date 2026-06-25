@@ -138,46 +138,6 @@ export default async function CoursesPage({
           </div>
         )}
       </section>
-
-      <section className="flex flex-col gap-3">
-        <div>
-          <h2 className="text-xl font-bold text-ink">
-            강좌별 평균 (수강 명단 기준)
-          </h2>
-          <p className="mt-1 text-sm text-ink-soft">
-            응답이 많은 순으로 정렬됩니다. 평균은 해당 강좌 응답의 5점 척도 전체
-            평균입니다.
-          </p>
-        </div>
-        <div className="overflow-x-auto rounded-xl border border-line bg-white p-4">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-line text-left text-ink-soft">
-                <th className="py-2 pr-2">강좌명</th>
-                <th className="w-20 whitespace-nowrap py-2 pl-2 text-right font-medium">
-                  응답 수
-                </th>
-                <th className="w-24 whitespace-nowrap py-2 pl-4 text-right font-medium">
-                  만족도 평균
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {breakdown.map((c) => (
-                <tr key={c.name} className="border-b border-line/50">
-                  <td className="py-2 pr-2 text-ink">{c.name}</td>
-                  <td className="w-20 py-2 pl-2 text-right tabular-nums text-ink-soft">
-                    {c.total}
-                  </td>
-                  <td className="w-24 py-2 pl-4 text-right font-semibold tabular-nums text-ink">
-                    {c.overallAvg.toFixed(2)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
     </div>
   );
 }
