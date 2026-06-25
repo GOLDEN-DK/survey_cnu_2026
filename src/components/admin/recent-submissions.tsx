@@ -1,7 +1,7 @@
 "use client";
-// 실시간 제출 현황 — 최근 제출(성공·실패)을 10초마다 폴링해 보여주는 대시보드 상단 위젯
+// 최근 제출 현황 — 페이지 로드 시(서버 렌더) 최신, 표 위 새로고침 버튼으로 수동 갱신
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { formatPhone } from "@/lib/format";
 import type { RecentSubmission } from "@/lib/admin-stats";
 
@@ -24,38 +24,36 @@ export function RecentSubmissions({
   initial: RecentSubmission[];
 }) {
   const [rows, setRows] = useState<RecentSubmission[]>(initial);
+  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    let alive = true;
-    const tick = async () => {
-      try {
-        const res = await fetch(
-          `/api/admin/recent?survey=${encodeURIComponent(slug)}`,
-          { cache: "no-store" },
-        );
-        if (!res.ok) return;
-        const data = (await res.json()) as RecentSubmission[];
-        if (alive) setRows(data);
-      } catch {
-        // 일시적 네트워크 오류는 화면을 유지하고 다음 주기에 재시도
-      }
-    };
-    const id = setInterval(tick, 10000);
-    return () => {
-      alive = false;
-      clearInterval(id);
-    };
-  }, [slug]);
+  const refresh = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(
+        `/api/admin/recent?survey=${encodeURIComponent(slug)}`,
+        { cache: "no-store" },
+      );
+      if (res.ok) setRows((await res.json()) as RecentSubmission[]);
+    } catch {
+      // 일시적 네트워크 오류는 화면을 유지(다시 새로고침)
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <section>
-      <h2 className="mb-3 flex items-center gap-2 text-xl font-bold text-ink">
-        실시간 제출 현황
-        <span className="inline-flex h-2 w-2 animate-pulse rounded-full bg-brand" />
-        <span className="text-sm font-normal text-ink-soft">
-          (10초마다 자동 갱신)
-        </span>
-      </h2>
+      <div className="mb-3 flex items-center gap-3">
+        <h2 className="text-xl font-bold text-ink">최근 제출 현황</h2>
+        <button
+          type="button"
+          onClick={refresh}
+          disabled={loading}
+          className="ml-auto rounded-lg border border-line px-3 py-1 text-xs font-semibold text-ink-soft hover:border-brand hover:text-brand disabled:opacity-50"
+        >
+          {loading ? "갱신 중…" : "↻ 새로고침"}
+        </button>
+      </div>
       <div className="overflow-hidden rounded-xl border border-line bg-white">
         {rows.length === 0 ? (
           <p className="p-4 text-ink-soft">아직 제출된 응답이 없습니다.</p>
