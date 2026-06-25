@@ -59,10 +59,10 @@ export default async function CoursesPage({
   searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ course?: string }>;
+  searchParams: Promise<{ course?: string; sort?: string; dir?: string }>;
 }) {
   const { slug } = await params;
-  const { course } = await searchParams;
+  const { course, sort, dir } = await searchParams;
   const breakdown = await getCourseBreakdown(slug);
   if (breakdown.length === 0) {
     return <p className="text-ink-soft">아직 수집된 응답이 없습니다.</p>;
@@ -80,13 +80,14 @@ export default async function CoursesPage({
           </p>
         </div>
         <CourseList
-          slug={slug}
           courses={breakdown.map((c) => ({
             name: c.name,
             professor: c.professor,
             total: c.total,
             overallAvg: c.overallAvg,
           }))}
+          sort={sort}
+          dir={dir}
         />
       </section>
     );
@@ -100,7 +101,11 @@ export default async function CoursesPage({
     <div className="flex flex-col gap-8">
       <section className="flex flex-col gap-3">
         <Link
-          href={`/admin/s/${slug}/courses`}
+          href={
+            sort
+              ? `/admin/s/${slug}/courses?sort=${sort}&dir=${dir ?? "desc"}`
+              : `/admin/s/${slug}/courses`
+          }
           className="text-sm font-semibold text-brand hover:underline"
         >
           ← 강좌 목록으로

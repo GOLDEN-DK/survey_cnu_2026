@@ -1,5 +1,5 @@
 "use client";
-// 강좌별 현황 목록 — 정렬 가능한 표. 행 클릭 시 해당 강좌 상세(?course=)로 이동한다.
+// 강좌별 현황 목록 — 정렬 가능한 표. 정렬 상태를 URL(?sort&dir)에 유지해 상세 갔다 와도 보존된다.
 
 import { useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
@@ -13,40 +13,58 @@ type CourseRow = {
 
 type SortKey = "name" | "total" | "avg";
 
+const normKey = (v?: string): SortKey =>
+  v === "name" || v === "avg" ? v : "total";
+const normDir = (v?: string): "asc" | "desc" => (v === "asc" ? "asc" : "desc");
+
 export function CourseList({
-  slug,
   courses,
+  sort,
+  dir,
 }: {
-  slug: string;
   courses: CourseRow[];
+  sort?: string;
+  dir?: string;
 }) {
   const router = useRouter();
   const pathname = usePathname();
-  const [sortKey, setSortKey] = useState<SortKey>("total");
-  const [dir, setDir] = useState<"asc" | "desc">("desc");
+  const [sortKey, setSortKey] = useState<SortKey>(normKey(sort));
+  const [sortDir, setSortDir] = useState<"asc" | "desc">(normDir(dir));
 
   const sorted = [...courses].sort((a, b) => {
     let v = 0;
     if (sortKey === "name") v = a.name.localeCompare(b.name, "ko");
     else if (sortKey === "total") v = a.total - b.total;
     else v = a.overallAvg - b.overallAvg;
-    return dir === "asc" ? v : -v;
+    return sortDir === "asc" ? v : -v;
   });
 
   const toggle = (key: SortKey) => {
-    if (sortKey === key) {
-      setDir((d) => (d === "asc" ? "desc" : "asc"));
-    } else {
-      setSortKey(key);
-      setDir(key === "name" ? "asc" : "desc");
-    }
+    const nextDir =
+      sortKey === key
+        ? sortDir === "asc"
+          ? "desc"
+          : "asc"
+        : key === "name"
+          ? "asc"
+          : "desc";
+    setSortKey(key);
+    setSortDir(nextDir);
+    // 정렬 상태를 URL에 반영(서버 왕복 없이) — 상세 갔다 오거나 새로고침해도 유지된다.
+    window.history.replaceState(
+      null,
+      "",
+      `${pathname}?sort=${key}&dir=${nextDir}`,
+    );
   };
 
   const arrow = (key: SortKey) =>
-    sortKey === key ? (dir === "asc" ? " ▲" : " ▼") : "";
+    sortKey === key ? (sortDir === "asc" ? " ▲" : " ▼") : "";
 
   const go = (name: string) =>
-    router.push(`${pathname}?course=${encodeURIComponent(name)}`);
+    router.push(
+      `${pathname}?course=${encodeURIComponent(name)}&sort=${sortKey}&dir=${sortDir}`,
+    );
 
   return (
     <div className="overflow-x-auto rounded-xl border border-line bg-white">
