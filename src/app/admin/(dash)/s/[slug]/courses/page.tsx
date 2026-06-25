@@ -1,5 +1,6 @@
-// 강좌별 집계 — 강좌 선택 시 문항 평균 + 응답자별 개별 응답, 하단 강좌별 평균 목록
+// 강좌별 집계 — 목록(정렬) → 강좌 클릭 → 상세(문항 평균·응답자별 응답) → 목록 복귀
 
+import Link from "next/link";
 import {
   getCourseBreakdown,
   getCourseResponses,
@@ -7,7 +8,7 @@ import {
 } from "@/lib/admin-stats";
 import { ScaleAvgChart } from "@/components/admin/charts";
 import { ScaleTable } from "@/components/admin/scale-table";
-import { CourseSelect } from "./CourseSelect";
+import { CourseList } from "./CourseList";
 
 export const dynamic = "force-dynamic";
 
@@ -67,35 +68,52 @@ export default async function CoursesPage({
     return <p className="text-ink-soft">아직 수집된 응답이 없습니다.</p>;
   }
 
-  const selectedName =
-    course && breakdown.some((c) => c.name === course)
-      ? course
-      : breakdown[0].name;
-  const cur = breakdown.find((c) => c.name === selectedName)!;
-  const responses = await getCourseResponses(slug, selectedName);
-
-  return (
-    <div className="flex flex-col gap-8">
+  // 목록 모드 — course 미지정(또는 매칭 실패) 시 강좌 현황 표를 보여준다.
+  if (!course || !breakdown.some((c) => c.name === course)) {
+    return (
       <section className="flex flex-col gap-3">
         <div>
           <h2 className="text-xl font-bold text-ink">강좌별 문항 만족도</h2>
           <p className="mt-1 text-sm text-ink-soft">
-            강좌를 선택하면 해당 강좌의 문항별 평균·분포와 응답자별 상세 응답을 볼
-            수 있습니다.
+            강좌별 응답 수·만족도 평균입니다. 머리글을 눌러 정렬할 수 있고, 강좌를
+            클릭하면 문항별 상세 통계와 응답자별 응답을 볼 수 있습니다.
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <CourseSelect
-            courses={breakdown.map((c) => ({ name: c.name, total: c.total }))}
-            selected={selectedName}
-          />
-          <div className="text-sm text-ink-soft">
+        <CourseList
+          slug={slug}
+          courses={breakdown.map((c) => ({
+            name: c.name,
+            professor: c.professor,
+            total: c.total,
+            overallAvg: c.overallAvg,
+          }))}
+        />
+      </section>
+    );
+  }
+
+  // 상세 모드 — 선택 강좌의 문항별 통계 + 응답자별 응답.
+  const cur = breakdown.find((c) => c.name === course)!;
+  const responses = await getCourseResponses(slug, course);
+
+  return (
+    <div className="flex flex-col gap-8">
+      <section className="flex flex-col gap-3">
+        <Link
+          href={`/admin/s/${slug}/courses`}
+          className="text-sm font-semibold text-brand hover:underline"
+        >
+          ← 강좌 목록으로
+        </Link>
+        <div>
+          <h2 className="text-xl font-bold text-ink">{cur.name}</h2>
+          <p className="mt-1 text-sm text-ink-soft">
             {cur.professor ? <span>{cur.professor} 교수 · </span> : null}
             응답 {cur.total}명 · 만족도 평균{" "}
             <span className="font-semibold text-ink">
               {cur.overallAvg.toFixed(2)}
             </span>
-          </div>
+          </p>
         </div>
 
         {cur.scales.length > 0 && (
@@ -119,7 +137,7 @@ export default async function CoursesPage({
           <h2 className="text-xl font-bold text-ink">
             응답자별 상세 응답{" "}
             <span className="text-sm font-normal text-ink-soft">
-              ({selectedName} · {responses.length}명)
+              ({responses.length}명)
             </span>
           </h2>
           <p className="mt-1 text-sm text-ink-soft">
