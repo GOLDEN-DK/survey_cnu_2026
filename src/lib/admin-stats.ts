@@ -449,6 +449,8 @@ export type Comment = {
   code: string;
   question: string;
   text: string;
+  respondentName: string | null;
+  courseName: string | null;
 };
 
 // 정성(장문) 응답 목록 — 검색어가 있으면 본문에 포함되는 것만.
@@ -473,7 +475,10 @@ export async function getComments(
         ? { contains: search, mode: "insensitive" }
         : { not: null },
     },
-    include: { question: true, response: true },
+    include: {
+      question: true,
+      response: { include: { course: { select: { name: true } } } },
+    },
     orderBy: { response: { submittedAt: "desc" } },
     take: 500,
   });
@@ -486,6 +491,8 @@ export async function getComments(
       code: a.question.code,
       question: a.question.text,
       text: a.valueText as string,
+      respondentName: a.response.respondentName,
+      courseName: a.response.course?.name ?? null,
     }));
 }
 

@@ -49,6 +49,18 @@ export default async function CommentsPage({
               <span className="truncate">{c.question}</span>
               <span className="ml-auto">{c.submittedAt}</span>
             </div>
+            {(c.respondentName || c.courseName) && (
+              <div className="mb-1 flex flex-wrap items-center gap-2 text-xs">
+                {c.respondentName && (
+                  <span className="font-semibold text-ink">
+                    {c.respondentName}
+                  </span>
+                )}
+                {c.courseName && (
+                  <span className="text-ink-soft">· {c.courseName}</span>
+                )}
+              </div>
+            )}
             <p className="whitespace-pre-line text-sm text-ink">{c.text}</p>
           </div>
         ))}

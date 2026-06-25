@@ -1,6 +1,7 @@
 // 제출 실패 보관함 — 최종 제출이 실패해 보존된 작성 답변 목록(복원·연락용)
 
 import { getFailedSubmissions } from "@/lib/admin-stats";
+import { RecoverButton } from "./RecoverButton";
 
 export const dynamic = "force-dynamic";
 
@@ -50,6 +51,13 @@ export default async function FailedPage({
             {f.error && (
               <p className="mt-2 text-xs text-ink-soft">오류: {f.error}</p>
             )}
+            <div className="mt-3 flex justify-end border-t border-line pt-3">
+              <RecoverButton
+                id={f.id}
+                slug={slug}
+                name={f.respondentName ?? "응답자"}
+              />
+            </div>
           </div>
         ))}
         {rows.length === 0 && (
