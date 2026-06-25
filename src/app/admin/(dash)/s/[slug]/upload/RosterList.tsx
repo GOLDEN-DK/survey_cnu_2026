@@ -1,7 +1,8 @@
 "use client";
-// 응답자 명단 — 과목별 수강생 목록 + 개별 리셋/삭제 + 전체 응답 초기화.
+// 응답자 명단 — 과목별 수강생 목록 + 상태(응답완료/제출실패/미응답) 필터 + 개별 리셋/삭제 + 전체 응답 초기화.
 
 import { useActionState, useState } from "react";
+import Link from "next/link";
 import {
   resetEnrollment,
   deleteEnrollment,
@@ -17,7 +18,10 @@ type Row = {
   courseName: string;
   professor: string;
   responded: boolean;
+  failed: boolean;
 };
+
+type Filter = "all" | "responded" | "pending" | "failed";
 
 // 연락처 포맷 — 01012345678 → 010-1234-5678 (마스킹 없이 전체 표시)
 function formatPhone(phone: string): string {
@@ -28,12 +32,15 @@ function formatPhone(phone: string): string {
   return phone;
 }
 
+const statusOf = (r: Row): Filter =>
+  r.responded ? "responded" : r.failed ? "failed" : "pending";
+
 export function RosterList({ slug, roster }: { slug: string; roster: Row[] }) {
   const [allState, allAction, allPending] = useActionState<
     RosterActionState,
     FormData
   >(resetAllResponses, null);
-  const [respondedOnly, setRespondedOnly] = useState(true);
+  const [filter, setFilter] = useState<Filter>("all");
 
   if (roster.length === 0) {
     return (
@@ -44,7 +51,10 @@ export function RosterList({ slug, roster }: { slug: string; roster: Row[] }) {
   }
 
   const respondedCount = roster.filter((r) => r.responded).length;
-  const shown = respondedOnly ? roster.filter((r) => r.responded) : roster;
+  const failedCount = roster.filter((r) => r.failed).length;
+  const pendingCount = roster.length - respondedCount - failedCount;
+  const shown =
+    filter === "all" ? roster : roster.filter((r) => statusOf(r) === filter);
 
   // 과목별 그룹 (roster는 과목 orderNo·이름 순으로 이미 정렬됨)
   const groups = new Map<string, Row[]>();
@@ -56,19 +66,30 @@ export function RosterList({ slug, roster }: { slug: string; roster: Row[] }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-wrap items-center gap-2">
         <h3 className="font-semibold text-ink">응답자 명단</h3>
-        <span className="text-sm text-ink-soft">
-          응답 {respondedCount} / 전체 {roster.length}
-        </span>
-        <label className="flex items-center gap-1.5 text-sm text-ink-soft">
-          <input
-            type="checkbox"
-            checked={respondedOnly}
-            onChange={(e) => setRespondedOnly(e.target.checked)}
+        <div className="flex flex-wrap gap-1">
+          <FilterBtn
+            label={`전체 ${roster.length}`}
+            active={filter === "all"}
+            onClick={() => setFilter("all")}
           />
-          응답 완료만 보기
-        </label>
+          <FilterBtn
+            label={`응답 ${respondedCount}`}
+            active={filter === "responded"}
+            onClick={() => setFilter("responded")}
+          />
+          <FilterBtn
+            label={`미응답 ${pendingCount}`}
+            active={filter === "pending"}
+            onClick={() => setFilter("pending")}
+          />
+          <FilterBtn
+            label={`실패 ${failedCount}`}
+            active={filter === "failed"}
+            onClick={() => setFilter("failed")}
+          />
+        </div>
         <form action={allAction} className="ml-auto">
           <input type="hidden" name="slug" value={slug} />
           <button
@@ -97,12 +118,21 @@ export function RosterList({ slug, roster }: { slug: string; roster: Row[] }) {
         </p>
       )}
 
-      {shown.length === 0 && (
+      {failedCount > 0 && (
         <p className="text-sm text-ink-soft">
-          {respondedOnly
-            ? "응답을 완료한 사람이 없습니다."
-            : "명단이 없습니다."}
+          제출 실패한 분의 작성 내용은{" "}
+          <Link
+            href={`/admin/s/${slug}/failed`}
+            className="font-semibold text-brand hover:underline"
+          >
+            제출 실패
+          </Link>{" "}
+          탭에서 확인할 수 있습니다.
         </p>
+      )}
+
+      {shown.length === 0 && (
+        <p className="text-sm text-ink-soft">해당하는 사람이 없습니다.</p>
       )}
 
       {[...groups.entries()].map(([courseName, rows]) => (
@@ -133,6 +163,10 @@ export function RosterList({ slug, roster }: { slug: string; roster: Row[] }) {
                   <span className="rounded-full bg-brand/10 px-2 py-0.5 text-xs font-semibold text-brand">
                     응답 완료
                   </span>
+                ) : r.failed ? (
+                  <span className="rounded-full bg-danger/10 px-2 py-0.5 text-xs font-semibold text-danger">
+                    제출 실패
+                  </span>
                 ) : (
                   <span className="text-xs text-ink-soft">미응답</span>
                 )}
@@ -162,6 +196,30 @@ export function RosterList({ slug, roster }: { slug: string; roster: Row[] }) {
         </div>
       ))}
     </div>
+  );
+}
+
+function FilterBtn({
+  label,
+  active,
+  onClick,
+}: {
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`rounded-full px-3 py-1 text-xs font-semibold ${
+        active
+          ? "bg-brand text-on-brand"
+          : "bg-surface text-ink-soft hover:text-ink"
+      }`}
+    >
+      {label}
+    </button>
   );
 }
 

@@ -24,17 +24,17 @@ export default async function UploadPage({
   const { slug } = await params;
   const survey = await getSurveyBySlug(slug);
 
-  const stats = survey
-    ? {
-        courses: await prisma.course.count({ where: { surveyId: survey.id } }),
-        enrollments: await prisma.enrollment.count({
-          where: { surveyId: survey.id },
-        }),
-        responded: await prisma.enrollment.count({
-          where: { surveyId: survey.id, respondedAt: { not: null } },
-        }),
-      }
-    : { courses: 0, enrollments: 0, responded: 0 };
+  // 제출 실패 기록이 있는 enrollment(아직 미완료) — 명단에 '제출 실패'로 표시
+  const failedSet = survey
+    ? new Set(
+        (
+          await prisma.failedSubmission.findMany({
+            where: { surveyId: survey.id, enrollmentId: { not: null } },
+            select: { enrollmentId: true },
+          })
+        ).map((f) => f.enrollmentId as string),
+      )
+    : new Set<string>();
 
   const roster = survey
     ? (
@@ -51,8 +51,15 @@ export default async function UploadPage({
         courseName: e.course.name,
         professor: e.course.professor,
         responded: e.respondedAt != null,
+        failed: e.respondedAt == null && failedSet.has(e.id),
       }))
     : [];
+
+  const stats = {
+    enrollments: roster.length,
+    responded: roster.filter((r) => r.responded).length,
+    failed: roster.filter((r) => r.failed).length,
+  };
 
   return (
     <div className="flex flex-col gap-6">
@@ -66,10 +73,14 @@ export default async function UploadPage({
         </p>
       </section>
 
-      <section className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-        <StatCard label="등록된 설강과목" value={stats.courses} />
+      <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <StatCard label="등록된 수강생" value={stats.enrollments} />
         <StatCard label="응답 완료" value={stats.responded} />
+        <StatCard
+          label="미응답"
+          value={stats.enrollments - stats.responded - stats.failed}
+        />
+        <StatCard label="제출 실패" value={stats.failed} />
       </section>
 
       <section>
