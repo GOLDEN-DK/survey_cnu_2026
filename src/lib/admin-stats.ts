@@ -300,6 +300,73 @@ export async function getCourseBreakdown(
   return result;
 }
 
+export type ResponseDetail = {
+  respondentName: string | null;
+  submittedAt: string; // YYYY-MM-DD
+  scales: { no: number; code: string; text: string; score: number | null }[];
+  texts: { code: string; question: string; text: string }[]; // 자유의견(D2 인라인 + E1~E4)
+};
+
+// 특정 강좌의 개별 응답 — 응답자별로 척도 점수와 자유의견을 묶어 반환한다(선택 강좌만 로드).
+export async function getCourseResponses(
+  slug: string,
+  courseName: string,
+): Promise<ResponseDetail[]> {
+  const survey = await getSurveyBySlug(slug);
+  if (!survey) return [];
+
+  const responses = await prisma.response.findMany({
+    where: { surveyId: survey.id, course: { name: courseName } },
+    include: { answers: true },
+    orderBy: { submittedAt: "asc" },
+  });
+
+  // 척도 문항을 코드순 정렬해 1..N 일련번호를 부여(대시보드 차트·표와 동일 순서).
+  const scaleQs = survey.questions
+    .filter((q) => q.type === "scale_5")
+    .sort((a, b) => {
+      const [sa, na] = scaleOrderKey(a.code);
+      const [sb, nb] = scaleOrderKey(b.code);
+      return sa !== sb ? (sa < sb ? -1 : 1) : na - nb;
+    })
+    .map((q, i) => ({ id: q.id, no: i + 1, code: q.code, text: q.text }));
+
+  // 자유의견 문항: 장문(E1~E4) + 인라인 의견을 받는 척도(D2 commentMode).
+  const textQs = survey.questions.filter(
+    (q) => q.type === "long_text" || (q.type === "scale_5" && q.commentMode),
+  );
+
+  return responses.map((r) => {
+    // 한 응답의 answers[]를 questionId별 점수/텍스트로 분해.
+    const numById = new Map<string, number>();
+    const textById = new Map<string, string>();
+    for (const a of r.answers) {
+      if (a.valueNumber != null) numById.set(a.questionId, a.valueNumber);
+      else if (a.valueText != null && a.valueText.trim())
+        textById.set(a.questionId, a.valueText);
+    }
+    const scales = scaleQs.map((q) => ({
+      no: q.no,
+      code: q.code,
+      text: q.text,
+      score: numById.get(q.id) ?? null,
+    }));
+    const texts = textQs
+      .map((q) => ({
+        code: q.code,
+        question: q.text,
+        text: textById.get(q.id) ?? "",
+      }))
+      .filter((t) => t.text.trim().length > 0);
+    return {
+      respondentName: r.respondentName,
+      submittedAt: r.submittedAt.toISOString().slice(0, 10),
+      scales,
+      texts,
+    };
+  });
+}
+
 export type DistItem = { name: string; count: number };
 
 export type GenderAgeMatrix = {
