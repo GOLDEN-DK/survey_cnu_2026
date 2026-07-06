@@ -54,7 +54,7 @@ export function EditableNote({
   }, [state]);
 
   return (
-    <div className="avoid-break">
+    <div>
       <div className="mb-1 flex items-center justify-end gap-2 print:hidden">
         <span
           className={`rounded px-1.5 py-0.5 text-[11px] font-semibold ${

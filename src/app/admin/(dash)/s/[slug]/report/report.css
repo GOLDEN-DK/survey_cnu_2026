@@ -2,7 +2,7 @@
 
 @page {
   size: A4 portrait;
-  margin: 12mm 10mm 16mm 10mm;
+  margin: 12mm 10mm;
 }
 
 .report-root {
@@ -28,6 +28,8 @@
   padding-bottom: 5px;
   margin-top: 40px;
   margin-bottom: 6px;
+  /* 제목이 페이지 맨 아래 홀로 남지 않도록 다음 내용과 함께 넘긴다 */
+  break-after: avoid;
 }
 .report-root h3 {
   color: #2f5496;
@@ -35,6 +37,7 @@
   font-weight: 700;
   margin-top: 24px;
   margin-bottom: 8px;
+  break-after: avoid;
 }
 
 .report-root p {
@@ -77,12 +80,7 @@
   display: table-header-group;
 }
 
-/* 인쇄 푸터 — 화면에서는 숨기고, 인쇄 시 매 페이지 하단에 반복 노출 */
-.report-footer {
-  display: none;
-}
-
-/* 인쇄 시 색·배경 유지 + 매 페이지 푸터 */
+/* 인쇄 시 색·배경 유지 */
 @media print {
   html,
   body {
@@ -91,15 +89,5 @@
   .report-root {
     print-color-adjust: exact;
     -webkit-print-color-adjust: exact;
-  }
-  .report-footer {
-    display: block;
-    position: fixed;
-    bottom: 4mm;
-    left: 0;
-    right: 0;
-    text-align: center;
-    font-size: 10px;
-    color: #9ca3af;
   }
 }

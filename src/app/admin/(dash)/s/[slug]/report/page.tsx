@@ -104,7 +104,7 @@ function CourseTable({
   showInspect?: boolean;
 }) {
   return (
-    <div className="avoid-break overflow-x-auto">
+    <div className="overflow-x-auto">
       <table>
         <thead>
           <tr>
@@ -437,7 +437,7 @@ export default async function ReportPage({
         </ChartBox>
 
         <h3 className="mt-4">2. 문항별 만족도</h3>
-        <div className="avoid-break overflow-x-auto">
+        <div className="overflow-x-auto">
           <table>
             <thead>
               <tr>
@@ -480,7 +480,7 @@ export default async function ReportPage({
         {/* ── Ⅲ. 응답자 및 수강 목적 현황 ── */}
         {roster && (
           <>
-            <SectionH num="Ⅲ" title="응답자 및 수강 목적 현황" breakBefore />
+            <SectionH num="Ⅲ" title="응답자 및 수강 목적 현황" />
             <h3 className="mt-3">1. 전체 수강생 인구통계</h3>
             <p className="mt-1">
               전체 수강생 {roster.total.toLocaleString()}명 기준 성별·연령대 구성은 다음과 같다.
@@ -545,7 +545,7 @@ export default async function ReportPage({
         )}
 
         {/* ── Ⅳ. 강좌·교수별 만족도 분석 ── */}
-        <SectionH num="Ⅳ" title="강좌·교수별 만족도 분석" breakBefore />
+        <SectionH num="Ⅳ" title="강좌·교수별 만족도 분석" />
         <ul className="mt-2 flex list-none flex-col gap-1">
           <li className="pl-4 -indent-4">
             · 강좌별 평가는 응답 수 3명 이상 강좌를 중심으로 참고하되, 우수 강좌는 응답 수 5명 이상 강좌를 우선 검토하였다.
@@ -627,7 +627,7 @@ export default async function ReportPage({
         )}
 
         {/* ── Ⅴ. 주관식 자유의견 분석 ── */}
-        <SectionH num="Ⅴ" title="주관식 자유의견 및 불편사항 분석" breakBefore />
+        <SectionH num="Ⅴ" title="주관식 자유의견 및 불편사항 분석" />
         <p className="mt-2">
           자유의견은 무응답·‘없음’ 등 의미 없는 응답을 제외하고 내용 중심으로 유형화하였다. 만족 의견(E1 {commentCounts.E1}건)과 개선 의견(불만족 E5 {commentCounts.E5}건 + 개선 E2 {commentCounts.E2}건)을 각각 분류하였다.
         </p>
@@ -699,7 +699,7 @@ export default async function ReportPage({
         )}
 
         {/* ── Ⅵ. 차기 운영 개선 방향 ── */}
-        <SectionH num="Ⅵ" title="2026학년도 2학기 운영 개선 방향" breakBefore />
+        <SectionH num="Ⅵ" title="2026학년도 2학기 운영 개선 방향" />
         <div className="mt-2">
           <EditableNote
             slug={slug}
@@ -721,7 +721,7 @@ export default async function ReportPage({
         </div>
 
         {/* ── 붙임 1. 강좌·교수별 만족도 현황 ── */}
-        <SectionH num="붙임 1" title="강좌·교수별 만족도 현황" breakBefore />
+        <SectionH num="붙임 1" title="강좌·교수별 만족도 현황" />
         <p className="mt-2 text-[12px]">
           응답 1건 이상 전체 강좌를 전체 평균 내림차순으로 정리한 것이다(척도 문항 평균 기준).
         </p>
@@ -771,11 +771,11 @@ export default async function ReportPage({
         {/* ── 붙임 2. 수강생 인구통계 ── */}
         {roster && (
           <>
-            <SectionH num="붙임 2" title="수강생 인구통계" breakBefore />
+            <SectionH num="붙임 2" title="수강생 인구통계" />
             <p className="mt-2 text-[12px]">
               전체 수강생 {roster.total.toLocaleString()}명 기준(응답 여부와 무관한 명단 전체).
             </p>
-            <div className="avoid-break overflow-x-auto">
+            <div className="overflow-x-auto">
               <table>
                 <thead>
                   <tr>
@@ -839,9 +839,6 @@ export default async function ReportPage({
             </div>
           </>
         )}
-
-        {/* 인쇄 시 매 페이지 하단 반복 푸터 */}
-        <div className="report-footer">{survey.title} 결과보고서</div>
       </div>
     </div>
   );
@@ -878,7 +875,7 @@ function DemoInsightTable({
       { group: "지역", items: regionRows, map: insights.region },
     ];
   return (
-    <div className="avoid-break overflow-x-auto">
+    <div className="overflow-x-auto">
       <table>
         <thead>
           <tr>
