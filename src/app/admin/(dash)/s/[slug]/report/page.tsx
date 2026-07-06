@@ -721,7 +721,7 @@ export default async function ReportPage({
         </div>
 
         {/* ── 붙임 1. 강좌·교수별 만족도 현황 ── */}
-        <SectionH num="붙임 1" title="강좌·교수별 만족도 현황" />
+        <SectionH num="붙임 1" title="강좌·교수별 만족도 현황" breakBefore />
         <p className="mt-2 text-[12px]">
           응답 1건 이상 전체 강좌를 전체 평균 내림차순으로 정리한 것이다(척도 문항 평균 기준).
         </p>
@@ -771,7 +771,7 @@ export default async function ReportPage({
         {/* ── 붙임 2. 수강생 인구통계 ── */}
         {roster && (
           <>
-            <SectionH num="붙임 2" title="수강생 인구통계" />
+            <SectionH num="붙임 2" title="수강생 인구통계" breakBefore />
             <p className="mt-2 text-[12px]">
               전체 수강생 {roster.total.toLocaleString()}명 기준(응답 여부와 무관한 명단 전체).
             </p>
