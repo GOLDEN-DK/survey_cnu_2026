@@ -206,3 +206,59 @@ export function responseRateCommentary(
   const parts = notable.map((r) => `${r.name}(${r.rate.toFixed(1)}%)`);
   return `전체 응답률(${overallRate.toFixed(1)}%) 대비 ${parts.join(", ")} 집단의 응답률 편차가 커, 해당 집단 결과 해석 시 대표성에 유의할 필요가 있다.`;
 }
+
+// 집단 비교 색(성별·연령대·시간대) — dataviz 검증 통과(blue/aqua/violet).
+// "use client"가 아닌 이 모듈에 두어 서버 컴포넌트(page)에서도 실제 값으로 import된다.
+export const GROUP_COLORS = {
+  gender: "#2a78d6",
+  age: "#1baf7a",
+  time: "#4a3aa7",
+} as const;
+
+// 집단 라벨 고정 순서(표시 일관성) — 성별·시간대는 count 정렬 대신 이 순서로 노출한다.
+export const GENDER_ORDER = ["남", "여", "미상", "(미상)"] as const;
+export const DAYNIGHT_ORDER = ["주간", "야간", "미상", "(미상)"] as const;
+
+// GroupStat/RateRow류 배열을 고정 라벨 순서로 정렬한다(목록에 없는 라벨은 뒤로).
+export function orderByLabels<T extends { name: string }>(
+  rows: T[],
+  order: readonly string[],
+): T[] {
+  const idx = (n: string) => {
+    const i = order.indexOf(n);
+    return i < 0 ? order.length : i;
+  };
+  return [...rows].sort((a, b) => idx(a.name) - idx(b.name));
+}
+
+// 지역 세분 라벨을 보고서 권역 버킷으로 묶는다.
+export const REGION_GROUP_ORDER = [
+  "대전 유성구",
+  "대전 서구",
+  "대전 기타(중구·대덕구·동구)",
+  "세종",
+  "충청권(충남·충북)",
+  "기타 지역·미상",
+] as const;
+
+function regionBucket(name: string): string {
+  if (name === "대전 유성구") return "대전 유성구";
+  if (name === "대전 서구") return "대전 서구";
+  if (/^대전/.test(name)) return "대전 기타(중구·대덕구·동구)";
+  if (name === "세종") return "세종";
+  if (name === "충남" || name === "충북") return "충청권(충남·충북)";
+  return "기타 지역·미상";
+}
+
+// 지역 세분 분포를 6개 권역으로 합산한다(해석 포인트 표·차트용, 붙임2 세분은 유지).
+export function groupRegions(items: DistItem[]): DistItem[] {
+  const map = new Map<string, number>();
+  for (const it of items) {
+    const b = regionBucket(it.name);
+    map.set(b, (map.get(b) ?? 0) + it.count);
+  }
+  return REGION_GROUP_ORDER.filter((g) => map.has(g)).map((g) => ({
+    name: g,
+    count: map.get(g)!,
+  }));
+}

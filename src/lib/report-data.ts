@@ -10,12 +10,14 @@ import {
   type RosterDemographics,
   type CourseBreakdown,
   type ScaleStat,
+  type DistItem,
 } from "./admin-stats";
 import {
   classify,
   isMeaningful,
   SATISFY_CATS,
   IMPROVE_CATS,
+  E3_CATS,
   type ClassifiedCat,
 } from "./comment-classify";
 import {
@@ -31,6 +33,10 @@ import {
   regionInsights,
   groupGapCommentary,
   responseRateCommentary,
+  orderByLabels,
+  groupRegions,
+  GENDER_ORDER,
+  DAYNIGHT_ORDER,
   CORE_CODES,
   type RateRow,
 } from "./report-rules";
@@ -83,11 +89,13 @@ export type ReportData = {
   allCourseRows: CourseRow[];
   satisfyCats: ClassifiedCat[];
   improveCats: ClassifiedCat[];
+  e3Cats: ClassifiedCat[];
   commentCounts: { E1: number; E5: number; E2: number; E3: number; E4: number };
   e3Samples: string[];
   rateByGender: RateRow[];
   rateByAge: RateRow[];
   rateByTime: RateRow[];
+  regionGrouped: DistItem[]; // 지역 6개 권역 묶음(해석 포인트 표·차트용)
   insights: {
     gender: Record<string, string>;
     age: Record<string, string>;
@@ -165,6 +173,7 @@ export async function getReportData(slug: string): Promise<ReportData | null> {
   const get = (code: string) => byCode.get(code) ?? [];
   const satisfyCats = classify(get("E1"), SATISFY_CATS);
   const improveCats = classify([...get("E5"), ...get("E2")], IMPROVE_CATS);
+  const e3Cats = classify(get("E3"), E3_CATS);
 
   // 강좌별 개선의견 분류 결과 캐시(관리방향·점검사항 판정에 재사용).
   const courseImproveCache = new Map<string, ClassifiedCat[]>();
@@ -225,10 +234,14 @@ export async function getReportData(slug: string): Promise<ReportData | null> {
     (r) => r.manageDirection === "개설 재검토",
   ).length;
 
+  // ── 집단 라벨 고정 순서(성별 남→여, 시간대 주간→야간) ──
+  stats.byGender = orderByLabels(stats.byGender, GENDER_ORDER);
+  stats.byTime = orderByLabels(stats.byTime, DAYNIGHT_ORDER);
+
   // ── 집단 응답률 ──
   const overallRate = roster && roster.total ? (stats.total / roster.total) * 100 : 0;
   const rateByGender = roster
-    ? buildRates(roster.byGender, stats.byGender)
+    ? orderByLabels(buildRates(roster.byGender, stats.byGender), GENDER_ORDER)
     : [];
   const rateByAge = roster ? buildRates(roster.byAgeBand, stats.byAgeBand) : [];
 
@@ -242,16 +255,22 @@ export async function getReportData(slug: string): Promise<ReportData | null> {
     const k = c.dayNight?.trim() || "(미상)";
     enrolledByTime.set(k, (enrolledByTime.get(k) ?? 0) + c._count.enrollments);
   }
-  const rateByTime = buildRates(
-    [...enrolledByTime.entries()].map(([name, count]) => ({ name, count })),
-    stats.byTime,
+  const rateByTime = orderByLabels(
+    buildRates(
+      [...enrolledByTime.entries()].map(([name, count]) => ({ name, count })),
+      stats.byTime,
+    ),
+    DAYNIGHT_ORDER,
   );
+
+  // 지역은 6개 권역으로 묶어 해석 포인트 표·차트에 쓴다(붙임2는 세분 유지).
+  const regionGrouped = roster ? groupRegions(roster.byRegion) : [];
 
   // ── 인구 해석·집단 해설 ──
   const insights = {
     gender: roster ? genderInsights(roster.byGender, roster.total) : {},
     age: roster ? ageInsights(roster.byAgeBand, roster.total) : {},
-    region: roster ? regionInsights(roster.byRegion, roster.total) : {},
+    region: roster ? regionInsights(regionGrouped, roster.total) : {},
   };
   const gapCommentary = {
     gender: groupGapCommentary(stats.byGender, "성별"),
@@ -329,6 +348,7 @@ export async function getReportData(slug: string): Promise<ReportData | null> {
     allCourseRows,
     satisfyCats,
     improveCats,
+    e3Cats,
     commentCounts: {
       E1: get("E1").length,
       E5: get("E5").length,
@@ -342,6 +362,7 @@ export async function getReportData(slug: string): Promise<ReportData | null> {
     rateByGender,
     rateByAge,
     rateByTime,
+    regionGrouped,
     insights,
     gapCommentary,
     rateCommentary,

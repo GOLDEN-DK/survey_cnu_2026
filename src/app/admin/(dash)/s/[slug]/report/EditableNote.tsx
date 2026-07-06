@@ -33,13 +33,11 @@ function RenderContent({ content }: { content: string }) {
 export function EditableNote({
   slug,
   sectionKey,
-  title,
   draft,
   saved,
 }: {
   slug: string;
   sectionKey: string;
-  title: string;
   draft: string;
   saved: { content: string; updatedAt: string } | null;
 }) {
@@ -57,10 +55,9 @@ export function EditableNote({
 
   return (
     <div className="avoid-break">
-      <div className="mb-1 flex items-center gap-2">
-        <h3 className="flex-1">{title}</h3>
+      <div className="mb-1 flex items-center justify-end gap-2 print:hidden">
         <span
-          className={`rounded px-1.5 py-0.5 text-[11px] font-semibold print:hidden ${
+          className={`rounded px-1.5 py-0.5 text-[11px] font-semibold ${
             saved
               ? "bg-amber-100 text-amber-700"
               : "bg-slate-100 text-slate-500"
@@ -72,7 +69,7 @@ export function EditableNote({
           <button
             type="button"
             onClick={() => setEditing(true)}
-            className="text-xs font-semibold text-brand hover:underline print:hidden"
+            className="text-xs font-semibold text-brand hover:underline"
           >
             편집
           </button>

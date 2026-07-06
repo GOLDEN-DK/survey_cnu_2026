@@ -2,7 +2,7 @@
 
 @page {
   size: A4 portrait;
-  margin: 12mm 10mm;
+  margin: 12mm 10mm 16mm 10mm;
 }
 
 .report-root {
@@ -10,27 +10,35 @@
   margin: 0 auto;
   color: #1f2937;
   font-size: 13px;
-  line-height: 1.65;
+  line-height: 1.85;
   background: #fff;
 }
 
 .report-root h1 {
   color: #1e3a8a;
-  font-size: 22px;
+  font-size: 24px;
   font-weight: 800;
+  line-height: 1.4;
 }
 .report-root h2 {
   color: #1e3a8a;
   font-size: 17px;
   font-weight: 700;
   border-bottom: 2px solid #1e3a8a;
-  padding-bottom: 4px;
-  margin-top: 8px;
+  padding-bottom: 5px;
+  margin-top: 40px;
+  margin-bottom: 6px;
 }
 .report-root h3 {
   color: #2f5496;
   font-size: 14px;
   font-weight: 700;
+  margin-top: 24px;
+  margin-bottom: 8px;
+}
+
+.report-root p {
+  margin-bottom: 6px;
 }
 
 .report-root table {
@@ -41,8 +49,9 @@
 .report-root th,
 .report-root td {
   border: 1px solid #cbd5e1;
-  padding: 5px 8px;
+  padding: 8px 10px;
   vertical-align: middle;
+  line-height: 1.55;
 }
 .report-root thead th {
   background: #deeaf6;
@@ -68,7 +77,12 @@
   display: table-header-group;
 }
 
-/* 인쇄 시 색·배경 유지 + 화면용 UI 숨김 */
+/* 인쇄 푸터 — 화면에서는 숨기고, 인쇄 시 매 페이지 하단에 반복 노출 */
+.report-footer {
+  display: none;
+}
+
+/* 인쇄 시 색·배경 유지 + 매 페이지 푸터 */
 @media print {
   html,
   body {
@@ -77,5 +91,15 @@
   .report-root {
     print-color-adjust: exact;
     -webkit-print-color-adjust: exact;
+  }
+  .report-footer {
+    display: block;
+    position: fixed;
+    bottom: 4mm;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font-size: 10px;
+    color: #9ca3af;
   }
 }

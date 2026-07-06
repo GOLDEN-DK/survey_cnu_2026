@@ -3,23 +3,22 @@
 import { notFound } from "next/navigation";
 import "./report.css";
 import { getReportData, type CourseRow } from "@/lib/report-data";
-import { labelOf } from "@/lib/report-rules";
-import type { ScaleStat, GroupStat, DistItem, RosterDemographics } from "@/lib/admin-stats";
+import { labelOf, GROUP_COLORS } from "@/lib/report-rules";
+import type { ScaleStat, DistItem, RosterDemographics } from "@/lib/admin-stats";
 import type { RateRow } from "@/lib/report-rules";
 import type { ClassifiedCat } from "@/lib/comment-classify";
 import {
   GroupAvgBarChart,
+  GroupCompareChart,
   ScaleDistStackedChart,
-  DemoCompareChart,
+  DonutChart,
+  RateBarChart,
   CommentTypeChart,
   CourseRankChart,
 } from "@/components/admin/report-charts";
 import { EditableNote } from "./EditableNote";
 import { PrintButton } from "./PrintButton";
-import {
-  REPORT_SECTION_TITLES,
-  type ReportSectionKey,
-} from "@/lib/report-draft";
+import type { ReportSectionKey } from "@/lib/report-draft";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +30,13 @@ const dfmt = (d: Date | null) =>
   d ? d.toLocaleDateString("ko-KR", { timeZone: "Asia/Seoul" }) : "-";
 const courseLabel = (c: { name: string; professor: string | null }) =>
   `${c.name}${c.professor ? ` (${c.professor})` : ""}`;
+// 강좌명에 이미 시간대 표기(주간/야간)가 있으면 중복 부착하지 않는다.
+const dayNightSuffix = (c: { name: string; dayNight: string | null }, wrap = false) =>
+  c.dayNight && !c.name.includes(c.dayNight)
+    ? wrap
+      ? ` (${c.dayNight})`
+      : ` · ${c.dayNight}`
+    : "";
 
 // 자유의견 유형별 정리 문구(표시용)
 const SAT_DESC: Record<string, string> = {
@@ -118,7 +124,7 @@ function CourseTable({
             <tr key={c.name}>
               <td>
                 {courseLabel(c)}
-                {c.dayNight ? ` · ${c.dayNight}` : ""}
+                {dayNightSuffix(c)}
                 {c.smallSample ? (
                   <span className="text-[10px] text-ink-soft"> ※표본작음</span>
                 ) : null}
@@ -163,11 +169,12 @@ export default async function ReportPage({
     allCourseRows,
     satisfyCats,
     improveCats,
+    e3Cats,
     commentCounts,
-    e3Samples,
     rateByGender,
     rateByAge,
     rateByTime,
+    regionGrouped,
     insights,
     gapCommentary,
     rateCommentary,
@@ -192,15 +199,71 @@ export default async function ReportPage({
   ].filter((x): x is { label: string; avg: number } => x.avg != null);
 
   const distChart = scales.map((s) => ({ label: labelOf(s), dist: s.dist }));
-  const groupSat = (rows: GroupStat[]) =>
-    rows.filter((r) => r.count > 0).map((r) => ({ label: r.name, avg: r.avg }));
-  const rateChart = (rows: RateRow[]) =>
-    rows.map((r) => ({
-      label: r.name,
-      enrolled: r.enrolled,
-      responded: r.responded,
-      rate: r.rate,
-    }));
+
+  // 집단별 만족도 통합(성별→연령대→시간대) — 표본 10 미만은 (n=..) 부기.
+  const withN = (name: string, count: number) =>
+    count < 10 ? `${name} (n=${count})` : name;
+  // 색은 data와 분리해 병렬 배열로 전달한다(차트 컴포넌트가 Cell로 소비).
+  const gRows = stats.byGender.filter((r) => r.count > 0);
+  const aRows = stats.byAgeBand.filter((r) => r.count > 0);
+  const tRows = stats.byTime.filter((r) => r.count > 0);
+  const satRows = [
+    ...gRows.map((r) => ({ label: withN(r.name, r.count), avg: r.avg })),
+    ...aRows.map((r) => ({ label: withN(r.name, r.count), avg: r.avg })),
+    ...tRows.map((r) => ({ label: withN(r.name, r.count), avg: r.avg })),
+  ];
+  const satColors = [
+    ...gRows.map(() => GROUP_COLORS.gender),
+    ...aRows.map(() => GROUP_COLORS.age),
+    ...tRows.map(() => GROUP_COLORS.time),
+  ];
+  const minSatAvg = satRows.length ? Math.min(...satRows.map((r) => r.avg)) : 0;
+  const satDomainMin = satRows.length
+    ? Math.min(4.0, Math.floor((minSatAvg - 0.2) * 4) / 4)
+    : 0;
+
+  // 집단별 응답률 통합.
+  const rateRow = (r: RateRow) => ({
+    label: r.name,
+    rate: r.rate,
+    rateLabel: `${r.rate.toFixed(1)}% (${r.responded}/${r.enrolled}명)`,
+  });
+  const rateRows = [
+    ...rateByGender.map(rateRow),
+    ...rateByAge.map(rateRow),
+    ...rateByTime.map(rateRow),
+  ];
+  const rateColors = [
+    ...rateByGender.map(() => GROUP_COLORS.gender),
+    ...rateByAge.map(() => GROUP_COLORS.age),
+    ...rateByTime.map(() => GROUP_COLORS.time),
+  ];
+
+  // 구성 도넛 — 성별 2조각, 연령대 6조각(밝은→진한 순서 램프).
+  const AGE_RAMP = [
+    "#dbeafe",
+    "#bfdbfe",
+    "#93c5fd",
+    "#60a5fa",
+    "#3b82f6",
+    "#1d4ed8",
+  ];
+  const donutGender = roster
+    ? roster.byGender
+        .filter((g) => g.count > 0)
+        .map((g) => ({
+          name: g.name,
+          value: g.count,
+          color: g.name === "남" ? "#1d4ed8" : g.name === "여" ? "#93c5fd" : "#cbd5e1",
+        }))
+    : [];
+  const donutAge = roster
+    ? roster.byAgeBand.map((a, i) => ({
+        name: a.name,
+        value: a.count,
+        color: AGE_RAMP[i] ?? "#1d4ed8",
+      }))
+    : [];
 
   const satTypes = satisfyCats
     .filter((c) => c.count > 0)
@@ -208,9 +271,36 @@ export default async function ReportPage({
   const impTypes = improveCats
     .filter((c) => c.count > 0)
     .sort((a, b) => b.count - a.count);
+  const e3Types = e3Cats
+    .filter((c) => c.count > 0)
+    .sort((a, b) => b.count - a.count);
 
   const a4 = [...(stats.choices[0]?.options ?? [])].sort(
     (a, b) => b.count - a.count,
+  );
+
+  // 발행일 — 조회 시점(Asia/Seoul).
+  const issuedAt = new Date().toLocaleDateString("ko-KR", {
+    timeZone: "Asia/Seoul",
+  });
+
+  // 집단 색 범례(성별·연령대·시간대 통합 차트용).
+  const groupLegend = (
+    <div className="mt-1 flex flex-wrap justify-center gap-x-4 gap-y-1 text-[11px] text-ink-soft">
+      {[
+        ["성별", GROUP_COLORS.gender],
+        ["연령대", GROUP_COLORS.age],
+        ["시간대", GROUP_COLORS.time],
+      ].map(([name, color]) => (
+        <span key={name} className="flex items-center gap-1">
+          <span
+            className="inline-block h-2.5 w-2.5 rounded-sm"
+            style={{ backgroundColor: color }}
+          />
+          {name}
+        </span>
+      ))}
+    </div>
   );
 
   return (
@@ -225,17 +315,16 @@ export default async function ReportPage({
 
       <div className="report-root">
         {/* ── 표지 ── */}
-        <div className="avoid-break flex min-h-[240px] flex-col items-center justify-center py-8 text-center">
-          <p className="text-base font-bold text-[#1e3a8a]">
-            충남대학교 평생교육원
-          </p>
-          <h1 className="mt-6">{survey.title}</h1>
-          <p className="mt-2 text-lg font-semibold">결과보고서</p>
-          <p className="mt-1 text-[13px] text-[#2f5496]">
-            강좌·교수별 만족도 및 교육환경 개선사항 분석 중심
-          </p>
+        <div className="avoid-break flex min-h-[900px] flex-col items-center py-12 text-center">
+          <div className="mt-20">
+            <h1>{survey.title}</h1>
+            <p className="mt-3 text-xl font-bold text-[#1e3a8a]">결과보고서</p>
+            <p className="mt-2 text-[13px] text-[#2f5496]">
+              강좌·교수별 만족도 및 교육환경 개선사항 분석 중심
+            </p>
+          </div>
 
-          <div className="mt-6 w-full overflow-hidden avoid-break">
+          <div className="mt-12 w-full overflow-hidden avoid-break">
             <table>
               <thead>
                 <tr>
@@ -263,9 +352,13 @@ export default async function ReportPage({
               </tbody>
             </table>
           </div>
-          <p className="mt-6 text-sm font-semibold">
-            {dfmt(survey.endAt) !== "-" ? dfmt(survey.endAt) : ""} 기준
-          </p>
+
+          <div className="mt-auto">
+            <p className="text-2xl font-bold text-[#1e3a8a]">
+              충남대학교 평생교육원
+            </p>
+            <p className="mt-3 text-sm text-ink-soft">{issuedAt} 조회 기준</p>
+          </div>
         </div>
 
         {/* ── Ⅰ. 조사 개요 ── */}
@@ -390,61 +483,47 @@ export default async function ReportPage({
             <SectionH num="Ⅲ" title="응답자 및 수강 목적 현황" breakBefore />
             <h3 className="mt-3">1. 전체 수강생 인구통계</h3>
             <p className="mt-1">
-              전체 수강생 {roster.total.toLocaleString()}명 기준으로 성별·연령대·지역 구성은 다음과 같으며, 명단 대비 실제 응답 비율(응답률)을 함께 확인하였다.
+              전체 수강생 {roster.total.toLocaleString()}명 기준 성별·연령대 구성은 다음과 같다.
             </p>
-            <div className="grid grid-cols-1 gap-2">
-              <ChartBox>
-                <p className="mb-1 text-center text-[11px] font-semibold text-ink-soft">
-                  성별 · 명단 대비 응답
-                </p>
-                <DemoCompareChart data={rateChart(rateByGender)} />
-              </ChartBox>
-              <ChartBox>
-                <p className="mb-1 text-center text-[11px] font-semibold text-ink-soft">
-                  연령대 · 명단 대비 응답
-                </p>
-                <DemoCompareChart data={rateChart(rateByAge)} />
-              </ChartBox>
-              {rateByTime.length > 0 && (
-                <ChartBox>
-                  <p className="mb-1 text-center text-[11px] font-semibold text-ink-soft">
-                    시간대(주간/야간) · 명단 대비 응답
-                  </p>
-                  <DemoCompareChart data={rateChart(rateByTime)} />
-                </ChartBox>
-              )}
-            </div>
+            <ChartBox>
+              <div className="flex flex-wrap items-start justify-around gap-2">
+                <DonutChart title="성별 구성" data={donutGender} />
+                <DonutChart title="연령대 구성" data={donutAge} />
+              </div>
+            </ChartBox>
+
+            <h3 className="mt-5">2. 명단 대비 응답률</h3>
+            <p className="mt-1">
+              명단 인원 대비 실제 응답 비율(응답률)을 집단별로 비교한 것이다. 붉은 점선은 전체 응답률({overallRate.toFixed(1)}%)이다.
+            </p>
+            <ChartBox>
+              <RateBarChart data={rateRows} colors={rateColors} refValue={overallRate} />
+              {groupLegend}
+            </ChartBox>
             <p className="mt-1">{rateCommentary}</p>
 
+            <h3 className="mt-5">3. 인구 구성 해석 포인트</h3>
             <DemoInsightTable
               roster={roster}
+              regionRows={regionGrouped}
               insights={insights}
             />
 
-            <h3 className="mt-4">2. 집단별 만족도 비교</h3>
-            <div className="grid grid-cols-1 gap-2">
-              <ChartBox>
-                <p className="mb-1 text-center text-[11px] font-semibold text-ink-soft">
-                  성별 만족도
-                </p>
-                <GroupAvgBarChart data={groupSat(stats.byGender)} />
-              </ChartBox>
-              <ChartBox>
-                <p className="mb-1 text-center text-[11px] font-semibold text-ink-soft">
-                  연령대별 만족도
-                </p>
-                <GroupAvgBarChart data={groupSat(stats.byAgeBand)} />
-              </ChartBox>
-              {stats.byTime.length > 0 && (
-                <ChartBox>
-                  <p className="mb-1 text-center text-[11px] font-semibold text-ink-soft">
-                    시간대별 만족도
-                  </p>
-                  <GroupAvgBarChart data={groupSat(stats.byTime)} />
-                </ChartBox>
-              )}
-            </div>
-            <ul className="mt-1 flex list-none flex-col gap-1">
+            <h3 className="mt-5">4. 집단별 만족도 비교</h3>
+            <p className="mt-1">
+              성별·연령대·시간대별 만족도 평균이다. 집단 간 차이를 보기 위해 가로축을 {satDomainMin.toFixed(2)}~5.0 구간으로 확대했고, 붉은 점선은 전체 평균({f2(stats.overallAvg)})이다.
+            </p>
+            <ChartBox>
+              <GroupCompareChart
+                data={satRows}
+                colors={satColors}
+                domainMin={satDomainMin}
+                refValue={stats.overallAvg}
+                refLabel={`전체 ${f2(stats.overallAvg)}`}
+              />
+              {groupLegend}
+            </ChartBox>
+            <ul className="mt-1 flex list-none flex-col gap-1.5">
               <li className="pl-4 -indent-4">· 성별 — {gapCommentary.gender}</li>
               <li className="pl-4 -indent-4">· 연령대 — {gapCommentary.age}</li>
               {stats.byTime.length > 0 && (
@@ -452,31 +531,15 @@ export default async function ReportPage({
               )}
             </ul>
 
-            <h3 className="mt-4">3. 수강 목적 (복수 응답)</h3>
-            <div className="avoid-break overflow-x-auto">
-              <table>
-                <thead>
-                  <tr>
-                    <th>수강 목적</th>
-                    <th>선택 건수</th>
-                    <th>응답자 대비 비율</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {a4.map((o) => (
-                    <tr key={o.label}>
-                      <td>{o.label}</td>
-                      <td className="text-center tabular-nums">{o.count}건</td>
-                      <td className="text-center tabular-nums">
-                        {pctOf(o.count, stats.total)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <h3 className="mt-5">5. 수강 목적 (복수 응답)</h3>
+            <ChartBox>
+              <CommentTypeChart
+                data={a4.map((o) => ({ label: o.label, count: o.count }))}
+                total={stats.total}
+              />
+            </ChartBox>
             <Note>
-              수강 목적은 복수 선택 문항이므로 선택 건수 합계는 응답 수와 일치하지 않는다.
+              수강 목적은 복수 선택 문항이므로 선택 건수 합계는 응답 수와 일치하지 않는다. 비율은 응답자({stats.total.toLocaleString()}명) 대비이다.
             </Note>
           </>
         )}
@@ -591,22 +654,47 @@ export default async function ReportPage({
         <EditableNote
           slug={slug}
           sectionKey="improve_actions"
-          title={REPORT_SECTION_TITLES.improve_actions}
           draft={noteOf("improve_actions").draft}
           saved={noteOf("improve_actions").saved}
         />
 
-        {e3Samples.length > 0 && (
+        {e3Types.length > 0 && (
           <>
             <h3 className="mt-4">4. 2학기 개설 희망 강좌 (E3)</h3>
-            <p className="mt-1">개설 희망({commentCounts.E3}건) 원문 일부이다.</p>
-            <ul className="mt-1 flex list-none flex-col gap-1">
-              {e3Samples.map((t, i) => (
-                <li key={i} className="pl-4 -indent-4 text-[12px] text-ink-soft">
-                  · {t}
-                </li>
-              ))}
-            </ul>
+            <p className="mt-1">
+              개설 희망 의견({commentCounts.E3}건)을 분야·운영방식 유형으로 분류한 것이다.
+            </p>
+            <ChartBox>
+              <CommentTypeChart
+                data={e3Types.map((c) => ({ label: c.name, count: c.count }))}
+                color="#0d9488"
+              />
+            </ChartBox>
+            <div className="avoid-break overflow-x-auto">
+              <table>
+                <thead>
+                  <tr>
+                    <th>희망 유형</th>
+                    <th>언급 건수</th>
+                    <th>대표 의견</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {e3Types.map((c) => (
+                    <tr key={c.name}>
+                      <td className="font-semibold">{c.name}</td>
+                      <td className="text-center tabular-nums">{c.count}건</td>
+                      <td className="text-[12px] text-ink-soft">
+                        {c.samples[0]
+                          ? `“${c.samples[0].replace(/\s+/g, " ").trim().slice(0, 50)}”`
+                          : "-"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <Note>희망 의견은 하나에 여러 분야가 포함될 수 있어 중복 분류하였다.</Note>
           </>
         )}
 
@@ -616,7 +704,6 @@ export default async function ReportPage({
           <EditableNote
             slug={slug}
             sectionKey="next_direction"
-            title={REPORT_SECTION_TITLES.next_direction}
             draft={noteOf("next_direction").draft}
             saved={noteOf("next_direction").saved}
           />
@@ -628,7 +715,6 @@ export default async function ReportPage({
           <EditableNote
             slug={slug}
             sectionKey="overall_opinion"
-            title={REPORT_SECTION_TITLES.overall_opinion}
             draft={noteOf("overall_opinion").draft}
             saved={noteOf("overall_opinion").saved}
           />
@@ -659,7 +745,7 @@ export default async function ReportPage({
                 <tr key={c.name}>
                   <td>
                     {c.name}
-                    {c.dayNight ? ` (${c.dayNight})` : ""}
+                    {dayNightSuffix(c, true)}
                   </td>
                   <td>{c.professor ?? "-"}</td>
                   <td className="text-center tabular-nums">{c.total}</td>
@@ -753,6 +839,9 @@ export default async function ReportPage({
             </div>
           </>
         )}
+
+        {/* 인쇄 시 매 페이지 하단 반복 푸터 */}
+        <div className="report-footer">{survey.title} 결과보고서</div>
       </div>
     </div>
   );
@@ -768,12 +857,14 @@ function coreHigh(byCode: Record<string, ScaleStat>): string {
   return items.join(", ");
 }
 
-// 인구 해석 포인트 표 — 성별·연령대·지역 각 행에 해석 문구를 붙인다.
+// 인구 해석 포인트 표 — 성별·연령대·지역(권역) 각 행에 해석 문구를 붙인다.
 function DemoInsightTable({
   roster,
+  regionRows,
   insights,
 }: {
   roster: RosterDemographics;
+  regionRows: DistItem[];
   insights: {
     gender: Record<string, string>;
     age: Record<string, string>;
@@ -784,7 +875,7 @@ function DemoInsightTable({
     [
       { group: "성별", items: roster.byGender, map: insights.gender },
       { group: "연령대", items: roster.byAgeBand, map: insights.age },
-      { group: "지역", items: roster.byRegion, map: insights.region },
+      { group: "지역", items: regionRows, map: insights.region },
     ];
   return (
     <div className="avoid-break overflow-x-auto">
