@@ -2,7 +2,8 @@
 
 @page {
   size: A4 portrait;
-  margin: 12mm 10mm;
+  /* 위·아래 여백을 넉넉히(18mm), 좌우 10mm */
+  margin: 18mm 10mm;
 }
 
 .report-root {
