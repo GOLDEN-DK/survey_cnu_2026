@@ -247,6 +247,7 @@ export async function getDashboardStats(
 export type CourseBreakdown = {
   name: string;
   professor: string | null;
+  dayNight: string | null;
   total: number;
   overallAvg: number;
   scales: ScaleStat[];
@@ -264,19 +265,20 @@ export async function getCourseBreakdown(
     where: { surveyId: survey.id },
     include: {
       answers: true,
-      course: { select: { name: true, professor: true } },
+      course: { select: { name: true, professor: true, dayNight: true } },
     },
     orderBy: { submittedAt: "asc" },
   });
 
   const groups = new Map<
     string,
-    { professor: string | null; rows: typeof responses }
+    { professor: string | null; dayNight: string | null; rows: typeof responses }
   >();
   for (const r of responses) {
     const name = r.course?.name ?? "(미지정)";
     const g = groups.get(name) ?? {
       professor: r.course?.professor ?? null,
+      dayNight: r.course?.dayNight ?? null,
       rows: [],
     };
     g.rows.push(r);
@@ -290,6 +292,7 @@ export async function getCourseBreakdown(
     return {
       name,
       professor: g.professor,
+      dayNight: g.dayNight,
       total: g.rows.length,
       overallAvg: allCount ? allSum / allCount : 0,
       scales,

@@ -11,7 +11,7 @@ export default function AdminLayout({
 }) {
   return (
     <div className="min-h-screen bg-surface">
-      <header className="border-b border-line bg-white">
+      <header className="border-b border-line bg-white print:hidden">
         <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3">
           <Link
             href="/admin"
@@ -37,7 +37,9 @@ export default function AdminLayout({
           </div>
         </div>
       </header>
-      <main className="mx-auto max-w-5xl px-4 py-6">{children}</main>
+      <main className="mx-auto max-w-5xl px-4 py-6 print:max-w-none print:p-0">
+        {children}
+      </main>
     </div>
   );
 }

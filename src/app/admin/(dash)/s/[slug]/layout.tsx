@@ -18,7 +18,7 @@ export default async function SurveyAdminLayout({
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-line pb-3">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-line pb-3 print:hidden">
         <span className="font-bold text-ink">{survey.title}</span>
         <nav className="flex flex-wrap gap-4 text-sm font-semibold text-ink-soft">
           <Link href={base} className="hover:text-brand">
@@ -26,6 +26,9 @@ export default async function SurveyAdminLayout({
           </Link>
           <Link href={`${base}/courses`} className="hover:text-brand">
             강좌별
+          </Link>
+          <Link href={`${base}/report`} className="hover:text-brand">
+            결과보고서
           </Link>
           <Link href={`${base}/comments`} className="hover:text-brand">
             정성 응답

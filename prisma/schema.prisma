@@ -40,6 +40,7 @@ model Survey {
   responses   Response[]
   courses     Course[]
   enrollments Enrollment[]
+  reportNotes ReportNote[]
 
   @@map("survey")
 }
@@ -171,4 +172,17 @@ model FailedSubmission {
 
   @@index([surveyId])
   @@map("failed_submission")
+}
+
+/// 결과보고서 서술 저장 — 자동 초안을 관리자가 수정하면 설문×섹션 키별로 저장본을 보관한다.
+model ReportNote {
+  id         String   @id @default(cuid())
+  surveyId   String   @map("survey_id")
+  sectionKey String   @map("section_key") // improve_actions | next_direction | overall_opinion
+  content    String
+  updatedAt  DateTime @updatedAt @map("updated_at")
+  survey     Survey   @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+
+  @@unique([surveyId, sectionKey])
+  @@map("report_note")
 }

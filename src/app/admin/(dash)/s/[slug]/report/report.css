@@ -1,0 +1,81 @@
+/* 결과보고서 인쇄 레이아웃 — A4 고정 폭 문서, 화면=인쇄 동일 렌더 */
+
+@page {
+  size: A4 portrait;
+  margin: 12mm 10mm;
+}
+
+.report-root {
+  width: 700px;
+  margin: 0 auto;
+  color: #1f2937;
+  font-size: 13px;
+  line-height: 1.65;
+  background: #fff;
+}
+
+.report-root h1 {
+  color: #1e3a8a;
+  font-size: 22px;
+  font-weight: 800;
+}
+.report-root h2 {
+  color: #1e3a8a;
+  font-size: 17px;
+  font-weight: 700;
+  border-bottom: 2px solid #1e3a8a;
+  padding-bottom: 4px;
+  margin-top: 8px;
+}
+.report-root h3 {
+  color: #2f5496;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.report-root table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.report-root th,
+.report-root td {
+  border: 1px solid #cbd5e1;
+  padding: 5px 8px;
+  vertical-align: middle;
+}
+.report-root thead th {
+  background: #deeaf6;
+  color: #1f3864;
+  font-weight: 700;
+  text-align: center;
+}
+.report-root tbody tr:nth-child(even) td {
+  background: #f4f7fc;
+}
+
+.report-root .avoid-break {
+  break-inside: avoid;
+}
+.report-root .page-break {
+  break-before: page;
+}
+/* 긴 표는 페이지를 넘나들되 행 단위로만 분할하고, 헤더는 페이지마다 반복 */
+.report-root tr {
+  break-inside: avoid;
+}
+.report-root thead {
+  display: table-header-group;
+}
+
+/* 인쇄 시 색·배경 유지 + 화면용 UI 숨김 */
+@media print {
+  html,
+  body {
+    background: #fff !important;
+  }
+  .report-root {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+}
