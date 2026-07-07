@@ -684,7 +684,7 @@ export default async function ReportPage({
                     <tr key={c.name}>
                       <td className="font-semibold">{c.name}</td>
                       <td className="text-center tabular-nums">{c.count}건</td>
-                      <td className="text-[12px] text-ink-soft">
+                      <td className="text-[10px] text-ink-soft">
                         {c.samples[0]
                           ? `“${c.samples[0].replace(/\s+/g, " ").trim().slice(0, 50)}”`
                           : "-"}
@@ -720,9 +720,10 @@ export default async function ReportPage({
           />
         </div>
 
-        {/* ── 붙임 1. 강좌·교수별 만족도 현황 ── */}
-        <SectionH num="붙임 1" title="강좌·교수별 만족도 현황" breakBefore />
-        <p className="mt-2 text-[12px]">
+        {/* ── 붙임. 강좌·교수별 만족도 현황 ── */}
+        <div className="appendix">
+        <SectionH num="붙임" title="강좌·교수별 만족도 현황" breakBefore />
+        <p className="mt-2 text-[11px]">
           응답 1건 이상 전체 강좌를 전체 평균 내림차순으로 정리한 것이다(척도 문항 평균 기준).
         </p>
         <div className="overflow-x-auto">
@@ -767,78 +768,7 @@ export default async function ReportPage({
         <Note>
           전체 평균은 척도 문항 평균이며, 비고는 보고서 작성 시점의 참고 기준이다. 최종 개설 여부는 수요·출석률·강좌 특성·강의실 여건 등을 종합 검토하여 결정한다.
         </Note>
-
-        {/* ── 붙임 2. 수강생 인구통계 ── */}
-        {roster && (
-          <>
-            <SectionH num="붙임 2" title="수강생 인구통계" breakBefore />
-            <p className="mt-2 text-[12px]">
-              전체 수강생 {roster.total.toLocaleString()}명 기준(응답 여부와 무관한 명단 전체).
-            </p>
-            <div className="overflow-x-auto">
-              <table>
-                <thead>
-                  <tr>
-                    <th>구분</th>
-                    <th>세부 항목</th>
-                    <th>인원</th>
-                    <th>비율</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <DistRows label="성별" items={roster.byGender} total={roster.total} />
-                  <DistRows
-                    label="연령대"
-                    items={roster.byAgeBand}
-                    total={roster.total}
-                  />
-                  <DistRows label="지역" items={roster.byRegion} total={roster.total} />
-                </tbody>
-              </table>
-            </div>
-
-            <h3 className="mt-4">성별 × 연령대 교차 (단위: 명)</h3>
-            <div className="avoid-break overflow-x-auto">
-              <table>
-                <thead>
-                  <tr>
-                    <th>성별＼연령대</th>
-                    {roster.genderAge.colLabels.map((c) => (
-                      <th key={c}>{c}</th>
-                    ))}
-                    <th>계</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {roster.genderAge.rowLabels.map((r, i) => (
-                    <tr key={r}>
-                      <td className="text-center font-semibold">{r}</td>
-                      {roster.genderAge.colLabels.map((c, j) => (
-                        <td key={c} className="text-center tabular-nums">
-                          {roster.genderAge.counts[i][j]}
-                        </td>
-                      ))}
-                      <td className="text-center font-semibold tabular-nums">
-                        {roster.genderAge.rowTotals[i]}
-                      </td>
-                    </tr>
-                  ))}
-                  <tr>
-                    <td className="text-center font-semibold">계</td>
-                    {roster.genderAge.colTotals.map((t, j) => (
-                      <td key={j} className="text-center font-semibold tabular-nums">
-                        {t}
-                      </td>
-                    ))}
-                    <td className="text-center font-semibold tabular-nums">
-                      {roster.total}
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </>
-        )}
+        </div>
       </div>
     </div>
   );
@@ -887,8 +817,17 @@ function DemoInsightTable({
           </tr>
         </thead>
         <tbody>
-          {rows.flatMap((r) =>
-            r.items.map((it, idx) => (
+          {rows.flatMap((r) => {
+            const msgs = r.items.map((it) => r.map[it.name] ?? "");
+            // 연속으로 같은 해석 문구는 하나의 셀로 병합한다(남·여가 동일 문구인 성별 등).
+            const spans = msgs.map(() => 0);
+            for (let i = 0; i < msgs.length; ) {
+              let j = i + 1;
+              while (j < msgs.length && msgs[j] === msgs[i]) j++;
+              spans[i] = j - i;
+              i = j;
+            }
+            return r.items.map((it, idx) => (
               <tr key={`${r.group}-${it.name}`}>
                 {idx === 0 && (
                   <td rowSpan={r.items.length} className="text-center font-semibold">
@@ -902,10 +841,10 @@ function DemoInsightTable({
                 <td className="text-center tabular-nums">
                   {pctOf(it.count, roster.total)}
                 </td>
-                <td>{r.map[it.name] ?? ""}</td>
+                {spans[idx] > 0 && <td rowSpan={spans[idx]}>{msgs[idx]}</td>}
               </tr>
-            )),
-          )}
+            ));
+          })}
         </tbody>
       </table>
     </div>
@@ -938,7 +877,7 @@ function CommentTable({
               <td>
                 {desc[c.name] ?? ""}
                 {c.samples[0] && (
-                  <span className="mt-0.5 block text-[11px] text-ink-soft">
+                  <span className="mt-0.5 block text-[10px] text-ink-soft">
                     “{c.samples[0].replace(/\s+/g, " ").trim().slice(0, 60)}”
                   </span>
                 )}
@@ -951,32 +890,3 @@ function CommentTable({
   );
 }
 
-// 붙임2 분포 행 — 구분 셀을 rowSpan으로 묶는다.
-function DistRows({
-  label,
-  items,
-  total,
-}: {
-  label: string;
-  items: DistItem[];
-  total: number;
-}) {
-  return (
-    <>
-      {items.map((it, idx) => (
-        <tr key={`${label}-${it.name}`}>
-          {idx === 0 && (
-            <td rowSpan={items.length} className="text-center font-semibold">
-              {label}
-            </td>
-          )}
-          <td>{it.name}</td>
-          <td className="text-center tabular-nums">
-            {it.count.toLocaleString()}명
-          </td>
-          <td className="text-center tabular-nums">{pctOf(it.count, total)}</td>
-        </tr>
-      ))}
-    </>
-  );
-}

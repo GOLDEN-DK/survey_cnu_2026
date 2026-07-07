@@ -48,14 +48,14 @@
 .report-root table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 12px;
+  font-size: 11px;
 }
 .report-root th,
 .report-root td {
   border: 1px solid #cbd5e1;
-  padding: 8px 10px;
+  padding: 4px 6px;
   vertical-align: middle;
-  line-height: 1.55;
+  line-height: 1.4;
 }
 .report-root thead th {
   background: #deeaf6;
@@ -65,6 +65,15 @@
 }
 .report-root tbody tr:nth-child(even) td {
   background: #f4f7fc;
+}
+/* 붙임 표는 본문보다 두 사이즈 작게(정보량 많은 참고 자료) */
+.report-root .appendix table {
+  font-size: 10px;
+}
+.report-root .appendix th,
+.report-root .appendix td {
+  padding: 3px 5px;
+  line-height: 1.35;
 }
 
 .report-root .avoid-break {

@@ -58,7 +58,7 @@ export function GroupAvgBarChart({
   return (
     <BarChart
       width={W}
-      height={Math.max(200, data.length * 34 + 44)}
+      height={Math.max(170, data.length * 26 + 44)}
       data={data}
       layout="vertical"
       margin={{ top: 8, right: 48, bottom: 8, left: 8 }}
@@ -77,7 +77,7 @@ export function GroupAvgBarChart({
         interval={0}
         tick={<TruncTick />}
       />
-      <Bar dataKey="avg" fill={BRAND} radius={[0, 4, 4, 0]} isAnimationActive={false}>
+      <Bar dataKey="avg" fill={BRAND} radius={[0, 4, 4, 0]} barSize={14} isAnimationActive={false}>
         <LabelList
           dataKey="avg"
           position="right"
@@ -108,7 +108,7 @@ export function GroupCompareChart({
   return (
     <BarChart
       width={W}
-      height={Math.max(220, data.length * 30 + 44)}
+      height={Math.max(180, data.length * 24 + 44)}
       data={data}
       layout="vertical"
       margin={{ top: 16, right: 48, bottom: 8, left: 8 }}
@@ -135,7 +135,7 @@ export function GroupCompareChart({
           }}
         />
       )}
-      <Bar dataKey="avg" radius={[0, 4, 4, 0]} isAnimationActive={false}>
+      <Bar dataKey="avg" radius={[0, 4, 4, 0]} barSize={12} isAnimationActive={false}>
         {data.map((_, i) => (
           <Cell key={i} fill={colors[i] ?? BRAND} />
         ))}
@@ -166,7 +166,7 @@ export function RateBarChart({
   return (
     <BarChart
       width={W}
-      height={Math.max(220, data.length * 30 + 44)}
+      height={Math.max(180, data.length * 24 + 44)}
       data={data}
       layout="vertical"
       margin={{ top: 16, right: 140, bottom: 8, left: 8 }}
@@ -198,7 +198,7 @@ export function RateBarChart({
           }}
         />
       )}
-      <Bar dataKey="rate" radius={[0, 4, 4, 0]} isAnimationActive={false}>
+      <Bar dataKey="rate" radius={[0, 4, 4, 0]} barSize={12} isAnimationActive={false}>
         {data.map((_, i) => (
           <Cell key={i} fill={colors[i] ?? BRAND} />
         ))}
@@ -208,7 +208,91 @@ export function RateBarChart({
   );
 }
 
-// 구성 비율 도넛 — 조각은 각도로, 정확한 값은 아래 HTML 범례로(라벨 겹침 방지).
+const RADIAN = Math.PI / 180;
+
+// recharts Pie label 콜백 — 조각별 {cx,cy,midAngle,innerRadius,outerRadius,percent}를 받아
+// 큰 조각(≥8%)은 링 안쪽에, 작은 조각은 지시선으로 바깥에 비율을 표기한다.
+function renderDonutLabel(props: {
+  cx?: number;
+  cy?: number;
+  midAngle?: number;
+  innerRadius?: number;
+  outerRadius?: number;
+  percent?: number;
+}) {
+  const cx = props.cx ?? 0;
+  const cy = props.cy ?? 0;
+  const midAngle = props.midAngle ?? 0;
+  const innerRadius = props.innerRadius ?? 0;
+  const outerRadius = props.outerRadius ?? 0;
+  const pct = (props.percent ?? 0) * 100;
+  if (pct < 2) return null;
+  const cos = Math.cos(-midAngle * RADIAN);
+  const sin = Math.sin(-midAngle * RADIAN);
+  const text = `${pct.toFixed(1)}%`;
+  if (pct >= 8) {
+    // 링 중앙에 인라인 표기 — 흰색 외곽선(halo)을 뒤에 깔아 조각색과 무관하게 판독.
+    const r = (innerRadius + outerRadius) / 2;
+    const x = cx + r * cos;
+    const y = cy + r * sin;
+    return (
+      <g>
+        <text
+          x={x}
+          y={y}
+          textAnchor="middle"
+          dominantBaseline="central"
+          fontSize={11}
+          fontWeight={600}
+          fill="none"
+          stroke="#ffffff"
+          strokeWidth={3}
+        >
+          {text}
+        </text>
+        <text
+          x={x}
+          y={y}
+          textAnchor="middle"
+          dominantBaseline="central"
+          fontSize={11}
+          fontWeight={600}
+          fill="#1f2937"
+        >
+          {text}
+        </text>
+      </g>
+    );
+  }
+  // 작은 조각 — 지시선 + 바깥 텍스트.
+  const sx = cx + outerRadius * cos;
+  const sy = cy + outerRadius * sin;
+  const mx = cx + (outerRadius + 10) * cos;
+  const my = cy + (outerRadius + 10) * sin;
+  const ex = mx + (cos >= 0 ? 8 : -8);
+  return (
+    <g>
+      <polyline
+        points={`${sx},${sy} ${mx},${my} ${ex},${my}`}
+        stroke="#94a3b8"
+        strokeWidth={1}
+        fill="none"
+      />
+      <text
+        x={ex + (cos >= 0 ? 3 : -3)}
+        y={my}
+        textAnchor={cos >= 0 ? "start" : "end"}
+        dominantBaseline="central"
+        fontSize={10}
+        fill="#374151"
+      >
+        {text}
+      </text>
+    </g>
+  );
+}
+
+// 구성 비율 도넛 — 조각은 각도+비율 라벨로, 정확한 값은 아래 HTML 범례로 보완.
 export function DonutChart({
   data,
   title,
@@ -222,18 +306,20 @@ export function DonutChart({
       <p className="mb-1 text-center text-[11px] font-semibold text-ink-soft">
         {title}
       </p>
-      <PieChart width={220} height={180}>
+      <PieChart width={250} height={190}>
         <Pie
           data={data}
           dataKey="value"
           nameKey="name"
           cx="50%"
           cy="50%"
-          innerRadius={46}
-          outerRadius={78}
+          innerRadius={42}
+          outerRadius={68}
           paddingAngle={1}
           stroke="#ffffff"
           strokeWidth={2}
+          labelLine={false}
+          label={renderDonutLabel}
           isAnimationActive={false}
         >
           {data.map((d, i) => (
@@ -278,7 +364,7 @@ export function ScaleDistStackedChart({
     <div>
       <BarChart
         width={W}
-        height={Math.max(240, rows.length * 28 + 40)}
+        height={Math.max(200, rows.length * 22 + 40)}
         data={rows}
         layout="vertical"
         stackOffset="expand"
@@ -305,6 +391,7 @@ export function ScaleDistStackedChart({
             name={DIST_NAMES[i]}
             stackId="a"
             fill={DIST_COLORS[i]}
+            barSize={14}
             isAnimationActive={false}
           />
         ))}
@@ -344,7 +431,7 @@ export function CommentTypeChart({
   return (
     <BarChart
       width={W}
-      height={Math.max(180, rows.length * 34 + 30)}
+      height={Math.max(150, rows.length * 26 + 30)}
       data={rows}
       layout="vertical"
       margin={{ top: 8, right: total ? 92 : 52, bottom: 8, left: 8 }}
@@ -358,7 +445,7 @@ export function CommentTypeChart({
         interval={0}
         tick={<TruncTick />}
       />
-      <Bar dataKey="count" fill={color} radius={[0, 4, 4, 0]} isAnimationActive={false}>
+      <Bar dataKey="count" fill={color} radius={[0, 4, 4, 0]} barSize={14} isAnimationActive={false}>
         <LabelList dataKey="_label" position="right" fontSize={11} fill="#374151" />
       </Bar>
     </BarChart>
@@ -378,7 +465,7 @@ export function CourseRankChart({
   return (
     <BarChart
       width={W}
-      height={Math.max(200, data.length * 30 + 40)}
+      height={Math.max(170, data.length * 24 + 40)}
       data={data}
       layout="vertical"
       margin={{ top: 8, right: 48, bottom: 8, left: 8 }}
@@ -392,7 +479,7 @@ export function CourseRankChart({
         interval={0}
         tick={<TruncTick />}
       />
-      <Bar dataKey="avg" radius={[0, 4, 4, 0]} isAnimationActive={false}>
+      <Bar dataKey="avg" radius={[0, 4, 4, 0]} barSize={12} isAnimationActive={false}>
         {data.map((_, i) => (
           <Cell key={i} fill={color} />
         ))}
