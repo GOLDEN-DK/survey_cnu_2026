@@ -3,8 +3,23 @@
 
 import { useEditor, EditorContent, type Editor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
-import { TableKit } from "@tiptap/extension-table";
+import { Table, TableRow, TableHeader, TableCell } from "@tiptap/extension-table";
 import { useEffect } from "react";
+
+// 표 노드에 행 간격(density) 속성 추가 — data-density로 저장·렌더되어 report.css가 셀 여백·줄간격을 조절한다.
+const TableWithDensity = Table.extend({
+  addAttributes() {
+    return {
+      ...(this.parent?.() || {}),
+      density: {
+        default: null,
+        parseHTML: (element: HTMLElement) => element.getAttribute("data-density"),
+        renderHTML: (attributes: { density?: string | null }) =>
+          attributes.density ? { "data-density": attributes.density } : {},
+      },
+    };
+  },
+}).configure({ resizable: false });
 
 function ToolbarButton({
   onClick,
@@ -37,7 +52,7 @@ export function NoteEditor({
   onChange: (html: string) => void;
 }) {
   const editor = useEditor({
-    extensions: [StarterKit, TableKit.configure({ table: { resizable: false } })],
+    extensions: [StarterKit, TableWithDensity, TableRow, TableHeader, TableCell],
     content: initialHtml || "<p></p>",
     immediatelyRender: false, // Next SSR hydration mismatch 방지
     editorProps: { attributes: { class: "note-editor-content" } },
@@ -105,6 +120,30 @@ export function NoteEditor({
         </ToolbarButton>
         <ToolbarButton onClick={() => editor.chain().focus().deleteTable().run()}>
           표 삭제
+        </ToolbarButton>
+        <span className="mx-1 h-4 w-px bg-line" />
+        <ToolbarButton
+          onClick={() =>
+            editor.chain().focus().updateAttributes("table", { density: "tight" }).run()
+          }
+          active={editor.isActive("table", { density: "tight" })}
+        >
+          행 좁게
+        </ToolbarButton>
+        <ToolbarButton
+          onClick={() =>
+            editor.chain().focus().updateAttributes("table", { density: null }).run()
+          }
+        >
+          행 보통
+        </ToolbarButton>
+        <ToolbarButton
+          onClick={() =>
+            editor.chain().focus().updateAttributes("table", { density: "loose" }).run()
+          }
+          active={editor.isActive("table", { density: "loose" })}
+        >
+          행 넓게
         </ToolbarButton>
       </div>
       <EditorContent editor={editor} />

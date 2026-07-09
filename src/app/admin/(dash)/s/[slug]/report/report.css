@@ -82,6 +82,17 @@
 .report-root tbody tr:nth-child(even) td {
   background: #f4f7fc;
 }
+/* 표 행 간격 — 에디터 '행 좁게/보통/넓게'(data-density)로 셀 여백·줄간격 조절 */
+.report-root table[data-density="tight"] th,
+.report-root table[data-density="tight"] td {
+  padding: 2px 5px;
+  line-height: 1.2;
+}
+.report-root table[data-density="loose"] th,
+.report-root table[data-density="loose"] td {
+  padding: 9px 8px;
+  line-height: 1.8;
+}
 /* 붙임 표는 본문보다 두 사이즈 작게(정보량 많은 참고 자료) */
 .report-root .appendix table {
   font-size: 10px;

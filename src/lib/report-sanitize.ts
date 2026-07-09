@@ -28,6 +28,7 @@ export function sanitizeNoteHtml(html: string): string {
       "col",
     ],
     allowedAttributes: {
+      table: ["data-density"],
       th: ["colspan", "rowspan"],
       td: ["colspan", "rowspan"],
       col: ["span"],
