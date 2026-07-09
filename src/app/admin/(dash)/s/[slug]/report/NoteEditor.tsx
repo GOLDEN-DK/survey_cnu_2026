@@ -6,7 +6,8 @@ import StarterKit from "@tiptap/starter-kit";
 import { Table, TableRow, TableHeader, TableCell } from "@tiptap/extension-table";
 import { useEffect } from "react";
 
-// 표 노드에 행 간격(density) 속성 추가 — data-density로 저장·렌더되어 report.css가 셀 여백·줄간격을 조절한다.
+// 표 노드에 행 간격(density)·열 간격(colgap) 속성 추가 — data-density/data-colgap로
+// 저장·렌더되어 report.css가 셀의 상·하(행)·좌·우(열) 여백과 줄간격을 조절한다.
 const TableWithDensity = Table.extend({
   addAttributes() {
     return {
@@ -16,6 +17,12 @@ const TableWithDensity = Table.extend({
         parseHTML: (element: HTMLElement) => element.getAttribute("data-density"),
         renderHTML: (attributes: { density?: string | null }) =>
           attributes.density ? { "data-density": attributes.density } : {},
+      },
+      colgap: {
+        default: null,
+        parseHTML: (element: HTMLElement) => element.getAttribute("data-colgap"),
+        renderHTML: (attributes: { colgap?: string | null }) =>
+          attributes.colgap ? { "data-colgap": attributes.colgap } : {},
       },
     };
   },
@@ -65,8 +72,8 @@ export function NoteEditor({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editor]);
 
-  // 표 density를 라이브 DOM에 동기화 — TableView가 노드 attr를 DOM에 반영하지 않아
-  // 매 업데이트마다 문서 순서대로 table 요소에 data-density를 직접 붙여 실시간 미리보기를 만든다.
+  // 표 density·colgap을 라이브 DOM에 동기화 — TableView가 노드 attr를 DOM에 반영하지 않아
+  // 매 업데이트마다 문서 순서대로 table 요소에 data-density/data-colgap를 직접 붙여 실시간 미리보기를 만든다.
   useEffect(() => {
     if (!editor) return;
     const sync = () => {
@@ -79,6 +86,9 @@ export function NoteEditor({
             const d = node.attrs.density as string | null;
             if (d) el.setAttribute("data-density", d);
             else el.removeAttribute("data-density");
+            const cg = node.attrs.colgap as string | null;
+            if (cg) el.setAttribute("data-colgap", cg);
+            else el.removeAttribute("data-colgap");
           }
         }
       });
@@ -169,6 +179,30 @@ export function NoteEditor({
           active={editor.isActive("table", { density: "loose" })}
         >
           행 넓게
+        </ToolbarButton>
+        <span className="mx-1 h-4 w-px bg-line" />
+        <ToolbarButton
+          onClick={() =>
+            editor.chain().focus().updateAttributes("table", { colgap: "tight" }).run()
+          }
+          active={editor.isActive("table", { colgap: "tight" })}
+        >
+          열 좁게
+        </ToolbarButton>
+        <ToolbarButton
+          onClick={() =>
+            editor.chain().focus().updateAttributes("table", { colgap: null }).run()
+          }
+        >
+          열 보통
+        </ToolbarButton>
+        <ToolbarButton
+          onClick={() =>
+            editor.chain().focus().updateAttributes("table", { colgap: "loose" }).run()
+          }
+          active={editor.isActive("table", { colgap: "loose" })}
+        >
+          열 넓게
         </ToolbarButton>
       </div>
       <EditorContent editor={editor} />

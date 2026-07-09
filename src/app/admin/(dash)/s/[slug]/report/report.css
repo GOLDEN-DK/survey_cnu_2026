@@ -82,16 +82,29 @@
 .report-root tbody tr:nth-child(even) td {
   background: #f4f7fc;
 }
-/* 표 행 간격 — 에디터 '행 좁게/보통/넓게'(data-density)로 셀 여백·줄간격 조절 */
+/* 표 행 간격 — 에디터 '행 좁게/보통/넓게'(data-density)로 셀 상·하 여백·줄간격 조절 */
 .report-root table[data-density="tight"] th,
 .report-root table[data-density="tight"] td {
-  padding: 2px 5px;
+  padding-top: 2px;
+  padding-bottom: 2px;
   line-height: 1.2;
 }
 .report-root table[data-density="loose"] th,
 .report-root table[data-density="loose"] td {
-  padding: 9px 8px;
+  padding-top: 9px;
+  padding-bottom: 9px;
   line-height: 1.8;
+}
+/* 표 열 간격 — 에디터 '열 좁게/보통/넓게'(data-colgap)로 셀 좌·우 여백 조절 */
+.report-root table[data-colgap="tight"] th,
+.report-root table[data-colgap="tight"] td {
+  padding-left: 3px;
+  padding-right: 3px;
+}
+.report-root table[data-colgap="loose"] th,
+.report-root table[data-colgap="loose"] td {
+  padding-left: 16px;
+  padding-right: 16px;
 }
 /* 붙임 표는 본문보다 두 사이즈 작게(정보량 많은 참고 자료) */
 .report-root .appendix table {
