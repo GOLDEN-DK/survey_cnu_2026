@@ -313,11 +313,16 @@ export default async function ReportPage({
       </div>
 
       <div className="report-root">
+        {/* 발행(조회) 일자 — A4 최상단 우측 */}
+        <p className="text-right text-xs text-ink-soft">{issuedAt} 조회 기준</p>
         {/* ── 표지 ── */}
         <div className="avoid-break flex min-h-[900px] flex-col items-center py-12 text-center">
           <div className="mt-20">
-            <h1>{survey.title}</h1>
-            <p className="mt-3 text-xl font-bold text-[#1e3a8a]">결과보고서</p>
+            <h1>
+              2026학년도 1학기
+              <br />
+              수강생 만족도 조사 결과보고서
+            </h1>
             <p className="mt-2 text-[13px] text-[#2f5496]">
               강좌·교수별 만족도 및 교육환경 개선사항 분석 중심
             </p>
@@ -356,7 +361,6 @@ export default async function ReportPage({
             <p className="text-2xl font-bold text-[#1e3a8a]">
               충남대학교 평생교육원
             </p>
-            <p className="mt-3 text-sm text-ink-soft">{issuedAt} 조회 기준</p>
           </div>
         </div>
 
@@ -499,7 +503,7 @@ export default async function ReportPage({
               <RateBarChart data={rateRows} colors={rateColors} refValue={overallRate} />
               {groupLegend}
             </ChartBox>
-            <p className="mt-1">{rateCommentary}</p>
+            {rateCommentary && <p className="mt-1">{rateCommentary}</p>}
 
             <h3 className="mt-5">3. 인구 구성 현황</h3>
             <DemoInsightTable roster={roster} regionRows={regionGrouped} />
