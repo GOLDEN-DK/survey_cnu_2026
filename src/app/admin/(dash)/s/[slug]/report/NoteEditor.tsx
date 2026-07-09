@@ -65,6 +65,31 @@ export function NoteEditor({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editor]);
 
+  // 표 density를 라이브 DOM에 동기화 — TableView가 노드 attr를 DOM에 반영하지 않아
+  // 매 업데이트마다 문서 순서대로 table 요소에 data-density를 직접 붙여 실시간 미리보기를 만든다.
+  useEffect(() => {
+    if (!editor) return;
+    const sync = () => {
+      const tables = editor.view.dom.querySelectorAll("table");
+      let i = 0;
+      editor.state.doc.descendants((node) => {
+        if (node.type.name === "table") {
+          const el = tables[i++];
+          if (el) {
+            const d = node.attrs.density as string | null;
+            if (d) el.setAttribute("data-density", d);
+            else el.removeAttribute("data-density");
+          }
+        }
+      });
+    };
+    editor.on("update", sync);
+    sync();
+    return () => {
+      editor.off("update", sync);
+    };
+  }, [editor]);
+
   if (!editor) return null;
 
   return (
