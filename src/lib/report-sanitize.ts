@@ -26,14 +26,24 @@ export function sanitizeNoteHtml(html: string): string {
       "td",
       "colgroup",
       "col",
+      "span",
     ],
     allowedAttributes: {
+      span: ["style"],
       table: ["data-density", "data-colgap"],
-      th: ["colspan", "rowspan"],
-      td: ["colspan", "rowspan"],
+      th: ["colspan", "rowspan", "data-colgap"],
+      td: ["colspan", "rowspan", "data-colgap"],
       col: ["span"],
     },
-    allowedStyles: {},
+    // 글자색만 허용(그 외 style/script/on* 제거).
+    allowedStyles: {
+      span: {
+        color: [
+          /^#(?:[0-9a-fA-F]{3}){1,2}$/,
+          /^rgb\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}\s*\)$/,
+        ],
+      },
+    },
     disallowedTagsMode: "discard",
   });
 }

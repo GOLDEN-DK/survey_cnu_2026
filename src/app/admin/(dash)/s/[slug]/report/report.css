@@ -95,12 +95,16 @@
   padding-bottom: 9px;
   line-height: 1.8;
 }
-/* 표 열 간격 — 에디터 '열 좁게/보통/넓게'(data-colgap)로 셀 좌·우 여백 조절 */
+/* 표 열 간격 — 선택 열의 셀(td/th[data-colgap]) 또는 표 전체(table[data-colgap], 하위호환) 좌·우 여백 */
+.report-root td[data-colgap="tight"],
+.report-root th[data-colgap="tight"],
 .report-root table[data-colgap="tight"] th,
 .report-root table[data-colgap="tight"] td {
   padding-left: 3px;
   padding-right: 3px;
 }
+.report-root td[data-colgap="loose"],
+.report-root th[data-colgap="loose"],
 .report-root table[data-colgap="loose"] th,
 .report-root table[data-colgap="loose"] td {
   padding-left: 16px;
