@@ -2,7 +2,7 @@
 // 편집 가능한 서술 섹션 — 저장본(없으면 자동 초안)을 HTML로 렌더하고, 리치 에디터로 편집·저장하면 DB에 반영한다.
 // 화면에서만 편집 UI·배지를 노출하고, 인쇄물에는 본문(표 포함)만 남긴다.
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { saveReportNote, type NoteState } from "./actions";
 import { noteToHtml } from "@/lib/report-html";
 import { NoteEditor } from "./NoteEditor";
@@ -25,7 +25,8 @@ export function EditableNote({
   );
   const content = saved?.content ?? draft;
   const html = noteToHtml(content); // 렌더/에디터 초기값 공통 HTML
-  const [editorHtml, setEditorHtml] = useState(html);
+  // 에디터의 현재 HTML을 담는 hidden input — 매 입력마다 리렌더하지 않도록 ref로 직접 갱신
+  const contentRef = useRef<HTMLInputElement>(null);
 
   // 저장·초안복귀가 성공하면 편집 모드를 닫는다(갱신된 saved는 서버에서 다시 내려온다).
   useEffect(() => {
@@ -47,10 +48,7 @@ export function EditableNote({
         {!editing && (
           <button
             type="button"
-            onClick={() => {
-              setEditorHtml(html); // 편집 시작 시 에디터·hidden input을 현재 본문으로 초기화
-              setEditing(true);
-            }}
+            onClick={() => setEditing(true)}
             className="text-xs font-semibold text-brand hover:underline"
           >
             편집
@@ -62,8 +60,13 @@ export function EditableNote({
         <form action={action} className="flex flex-col gap-2 print:hidden">
           <input type="hidden" name="slug" value={slug} />
           <input type="hidden" name="sectionKey" value={sectionKey} />
-          <input type="hidden" name="content" value={editorHtml} />
-          <NoteEditor initialHtml={html} onChange={setEditorHtml} />
+          <input type="hidden" name="content" defaultValue={html} ref={contentRef} />
+          <NoteEditor
+            initialHtml={html}
+            onChange={(h) => {
+              if (contentRef.current) contentRef.current.value = h;
+            }}
+          />
           <p className="text-xs text-ink-soft">
             굵게·기울임·목록과 표를 넣을 수 있습니다. 표는 “표 삽입” 후 행+/열+로 크기를 조절하세요.
           </p>

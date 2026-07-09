@@ -12,13 +12,15 @@ export function isHtml(content: string): boolean {
   );
 }
 
-// 레거시 평문/자동 초안을 기존 렌더 규약 그대로 HTML로 변환한다.
+// 레거시 평문/자동 초안을 HTML로 변환한다(원본 줄바꿈 구조 보존).
+// - CRLF(\r\n)·CR(\r)을 LF(\n)로 먼저 정규화 — 안 하면 \r\n\r\n이 문단 분리에 안 걸린다.
 // - 빈 줄 2개(\n{2,})로 문단 분리
 // - 블록의 모든 줄이 ·/- 로 시작하면 <ul><li>, 아니면 <p>
-// - 블록 내 단일 개행은 공백으로 결합(기존 RenderContent와 동일 결과)
+// - 블록 내 단일 개행은 <br>로 보존
 // - 모든 텍스트는 이스케이프한다.
 export function plainTextToHtml(text: string): string {
-  return text
+  const normalized = text.replace(/\r\n?/g, "\n");
+  return normalized
     .split(/\n{2,}/)
     .map((block) => {
       const lines = block
@@ -33,7 +35,7 @@ export function plainTextToHtml(text: string): string {
           .join("");
         return `<ul>${items}</ul>`;
       }
-      return `<p>${escapeHtml(lines.join(" "))}</p>`;
+      return `<p>${lines.map((l) => escapeHtml(l)).join("<br>")}</p>`;
     })
     .filter((b) => b.length > 0)
     .join("");
