@@ -30,6 +30,27 @@ const dfmt = (d: Date | null) =>
   d ? d.toLocaleDateString("ko-KR", { timeZone: "Asia/Seoul" }) : "-";
 const courseLabel = (c: { name: string; professor: string | null }) =>
   `${c.name}${c.professor ? ` (${c.professor})` : ""}`;
+// 학년도·학기 라벨 — 설문 제목의 "YYYY학년도 N학기"를 우선 쓰고, 없으면 시작일로 산출한다.
+function academicTermLabel(title: string, startAt: Date | null): string {
+  const m = title.match(/(\d{4})\s*학년도\s*([12])\s*학기/);
+  if (m) return `${m[1]}학년도 ${m[2]}학기`;
+  if (startAt) {
+    const parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Seoul",
+      year: "numeric",
+      month: "2-digit",
+    }).formatToParts(startAt);
+    const y = Number(parts.find((p) => p.type === "year")?.value);
+    const mo = Number(parts.find((p) => p.type === "month")?.value);
+    if (y && mo) {
+      // 3~8월=1학기, 9~12월=2학기, 1~2월=전년도 2학기
+      if (mo >= 3 && mo <= 8) return `${y}학년도 1학기`;
+      if (mo >= 9) return `${y}학년도 2학기`;
+      return `${y - 1}학년도 2학기`;
+    }
+  }
+  return "";
+}
 // 강좌명에 이미 시간대 표기(주간/야간)가 있으면 중복 부착하지 않는다.
 const dayNightSuffix = (c: { name: string; dayNight: string | null }, wrap = false) =>
   c.dayNight && !c.name.includes(c.dayNight)
@@ -185,6 +206,7 @@ export default async function ReportPage({
   );
   const avgOf = (code: string) => (byCode[code] ? byCode[code].avg : null);
   const noteOf = (key: ReportSectionKey) => notes.find((n) => n.key === key)!;
+  const termLabel = academicTermLabel(survey.title, survey.startAt);
 
   // 핵심 지표 요약 차트 데이터
   const coreChart = [
@@ -319,8 +341,12 @@ export default async function ReportPage({
         <div className="avoid-break flex min-h-[900px] flex-col items-center py-12 text-center">
           <div className="mt-20">
             <h1>
-              2026학년도 1학기
-              <br />
+              {termLabel && (
+                <>
+                  {termLabel}
+                  <br />
+                </>
+              )}
               수강생 만족도 조사 결과보고서
             </h1>
             <p className="mt-2 text-[13px] text-[#2f5496]">
