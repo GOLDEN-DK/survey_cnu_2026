@@ -1,34 +1,11 @@
 "use client";
-// 편집 가능한 서술 섹션 — 저장본(없으면 자동 초안)을 렌더하고, 관리자가 편집·저장하면 DB에 반영한다.
-// 화면에서만 편집 UI·배지를 노출하고, 인쇄물에는 본문 텍스트만 남긴다.
+// 편집 가능한 서술 섹션 — 저장본(없으면 자동 초안)을 HTML로 렌더하고, 리치 에디터로 편집·저장하면 DB에 반영한다.
+// 화면에서만 편집 UI·배지를 노출하고, 인쇄물에는 본문(표 포함)만 남긴다.
 
 import { useActionState, useEffect, useState } from "react";
 import { saveReportNote, type NoteState } from "./actions";
-
-// 저장 텍스트를 문단/불릿으로 렌더 — "·" 또는 "-"로 시작하는 줄은 리스트 항목으로 처리.
-function RenderContent({ content }: { content: string }) {
-  const blocks = content.split(/\n{2,}/);
-  return (
-    <div className="flex flex-col gap-2">
-      {blocks.map((block, bi) => {
-        const lines = block.split("\n").filter((l) => l.trim().length > 0);
-        const isList = lines.every((l) => /^[·\-]/.test(l.trim()));
-        if (isList) {
-          return (
-            <ul key={bi} className="flex list-none flex-col gap-1">
-              {lines.map((l, li) => (
-                <li key={li} className="pl-4 -indent-4">
-                  {l.replace(/^[·\-]\s*/, "· ")}
-                </li>
-              ))}
-            </ul>
-          );
-        }
-        return <p key={bi}>{block}</p>;
-      })}
-    </div>
-  );
-}
+import { noteToHtml } from "@/lib/report-html";
+import { NoteEditor } from "./NoteEditor";
 
 export function EditableNote({
   slug,
@@ -47,6 +24,8 @@ export function EditableNote({
     null,
   );
   const content = saved?.content ?? draft;
+  const html = noteToHtml(content); // 렌더/에디터 초기값 공통 HTML
+  const [editorHtml, setEditorHtml] = useState(html);
 
   // 저장·초안복귀가 성공하면 편집 모드를 닫는다(갱신된 saved는 서버에서 다시 내려온다).
   useEffect(() => {
@@ -68,7 +47,10 @@ export function EditableNote({
         {!editing && (
           <button
             type="button"
-            onClick={() => setEditing(true)}
+            onClick={() => {
+              setEditorHtml(html); // 편집 시작 시 에디터·hidden input을 현재 본문으로 초기화
+              setEditing(true);
+            }}
             className="text-xs font-semibold text-brand hover:underline"
           >
             편집
@@ -76,18 +58,14 @@ export function EditableNote({
         )}
       </div>
 
-      {editing ? (
+      {editing && (
         <form action={action} className="flex flex-col gap-2 print:hidden">
           <input type="hidden" name="slug" value={slug} />
           <input type="hidden" name="sectionKey" value={sectionKey} />
-          <textarea
-            name="content"
-            defaultValue={content}
-            rows={Math.min(20, content.split("\n").length + 3)}
-            className="w-full rounded-lg border border-line p-2 text-sm leading-relaxed"
-          />
+          <input type="hidden" name="content" value={editorHtml} />
+          <NoteEditor initialHtml={html} onChange={setEditorHtml} />
           <p className="text-xs text-ink-soft">
-            줄 앞에 · 를 붙이면 목록 항목으로, 빈 줄 두 개로 문단을 나눕니다.
+            굵게·기울임·목록과 표를 넣을 수 있습니다. 표는 “표 삽입” 후 행+/열+로 크기를 조절하세요.
           </p>
           <div className="flex items-center gap-2">
             <button
@@ -118,9 +96,13 @@ export function EditableNote({
             )}
           </div>
         </form>
-      ) : (
-        <RenderContent content={content} />
       )}
+
+      {/* 본문 — 비편집 시 화면·인쇄 모두 노출. 편집 시 화면에선 숨기고 인쇄에는 저장본을 남겨(편집 중 인쇄해도 누락 방지) 인쇄물을 보존한다. flex 래퍼를 쓰지 않아 인쇄 페이지 분할이 정상 동작한다. */}
+      <div
+        className={editing ? "hidden print:block" : undefined}
+        dangerouslySetInnerHTML={{ __html: html }}
+      />
     </div>
   );
 }

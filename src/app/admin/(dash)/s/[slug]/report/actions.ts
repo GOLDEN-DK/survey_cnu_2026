@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { verifySessionToken, COOKIE_NAME } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { REPORT_SECTION_KEYS, type ReportSectionKey } from "@/lib/report-draft";
+import { sanitizeNoteHtml, isEmptyNoteHtml } from "@/lib/report-sanitize";
 
 export type NoteState = { ok: boolean; message: string } | null;
 
@@ -23,14 +24,16 @@ export async function saveReportNote(
   const slug = String(formData.get("slug") ?? "");
   const sectionKey = String(formData.get("sectionKey") ?? "");
   const intent = String(formData.get("intent") ?? "");
-  const content = String(formData.get("content") ?? "").trim();
+  const rawContent = String(formData.get("content") ?? "").trim();
 
   if (!REPORT_SECTION_KEYS.includes(sectionKey as ReportSectionKey)) {
     return { ok: false, message: "섹션 값이 올바르지 않습니다." };
   }
-  if (content.length > 8000) {
-    return { ok: false, message: "내용이 너무 깁니다. (8000자 이내로 입력해 주세요)" };
+  if (rawContent.length > 50000) {
+    return { ok: false, message: "내용이 너무 깁니다. (5만자 이내로 입력해 주세요)" };
   }
+  // 저장 전 서버측에서 허용 태그만 남기도록 정화한다(리치 에디터 HTML).
+  const content = sanitizeNoteHtml(rawContent);
 
   const survey = await prisma.survey.findUnique({
     where: { slug },
@@ -39,7 +42,7 @@ export async function saveReportNote(
   if (!survey) return { ok: false, message: "설문을 찾을 수 없습니다." };
 
   // 초안 복귀(reset) 또는 빈 내용이면 저장본을 삭제해 자동 초안이 다시 렌더되게 한다.
-  if (intent === "reset" || content === "") {
+  if (intent === "reset" || isEmptyNoteHtml(content)) {
     await prisma.reportNote.deleteMany({
       where: { surveyId: survey.id, sectionKey },
     });
