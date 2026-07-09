@@ -202,7 +202,7 @@ export function responseRateCommentary(
     (r) => r.enrolled >= 10 && Math.abs(r.rate - overallRate) >= 5,
   );
   if (!notable.length)
-    return `집단별 응답률은 전체 응답률(${overallRate.toFixed(1)}%)과 큰 차이가 없어 응답자 구성이 명단 구성을 대체로 대표한다.`;
+    return `집단별 응답률이 전체 응답률(${overallRate.toFixed(1)}%)과 큰 차이가 없어, 특정 집단에 치우치지 않고 전체 수강생 구성을 고르게 반영한 결과로 볼 수 있다.`;
   const parts = notable.map((r) => `${r.name}(${r.rate.toFixed(1)}%)`);
   return `전체 응답률(${overallRate.toFixed(1)}%) 대비 ${parts.join(", ")} 집단의 응답률 편차가 커, 해당 집단 결과 해석 시 대표성에 유의할 필요가 있다.`;
 }

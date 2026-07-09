@@ -175,7 +175,6 @@ export default async function ReportPage({
     rateByAge,
     rateByTime,
     regionGrouped,
-    insights,
     gapCommentary,
     rateCommentary,
     notes,
@@ -502,12 +501,8 @@ export default async function ReportPage({
             </ChartBox>
             <p className="mt-1">{rateCommentary}</p>
 
-            <h3 className="mt-5">3. 인구 구성 해석 포인트</h3>
-            <DemoInsightTable
-              roster={roster}
-              regionRows={regionGrouped}
-              insights={insights}
-            />
+            <h3 className="mt-5">3. 인구 구성 현황</h3>
+            <DemoInsightTable roster={roster} regionRows={regionGrouped} />
 
             <h3 className="mt-5">4. 집단별 만족도 비교</h3>
             <p className="mt-1">
@@ -784,26 +779,19 @@ function coreHigh(byCode: Record<string, ScaleStat>): string {
   return items.join(", ");
 }
 
-// 인구 해석 포인트 표 — 성별·연령대·지역(권역) 각 행에 해석 문구를 붙인다.
+// 인구 구성 표 — 성별·연령대·지역(권역)별 인원·비율.
 function DemoInsightTable({
   roster,
   regionRows,
-  insights,
 }: {
   roster: RosterDemographics;
   regionRows: DistItem[];
-  insights: {
-    gender: Record<string, string>;
-    age: Record<string, string>;
-    region: Record<string, string>;
-  };
 }) {
-  const rows: { group: string; items: DistItem[]; map: Record<string, string> }[] =
-    [
-      { group: "성별", items: roster.byGender, map: insights.gender },
-      { group: "연령대", items: roster.byAgeBand, map: insights.age },
-      { group: "지역", items: regionRows, map: insights.region },
-    ];
+  const rows: { group: string; items: DistItem[] }[] = [
+    { group: "성별", items: roster.byGender },
+    { group: "연령대", items: roster.byAgeBand },
+    { group: "지역", items: regionRows },
+  ];
   return (
     <div className="overflow-x-auto">
       <table>
@@ -813,21 +801,11 @@ function DemoInsightTable({
             <th>세부 항목</th>
             <th>인원</th>
             <th>비율</th>
-            <th>해석 및 활용 포인트</th>
           </tr>
         </thead>
         <tbody>
-          {rows.flatMap((r) => {
-            const msgs = r.items.map((it) => r.map[it.name] ?? "");
-            // 연속으로 같은 해석 문구는 하나의 셀로 병합한다(남·여가 동일 문구인 성별 등).
-            const spans = msgs.map(() => 0);
-            for (let i = 0; i < msgs.length; ) {
-              let j = i + 1;
-              while (j < msgs.length && msgs[j] === msgs[i]) j++;
-              spans[i] = j - i;
-              i = j;
-            }
-            return r.items.map((it, idx) => (
+          {rows.flatMap((r) =>
+            r.items.map((it, idx) => (
               <tr key={`${r.group}-${it.name}`}>
                 {idx === 0 && (
                   <td rowSpan={r.items.length} className="text-center font-semibold">
@@ -841,10 +819,9 @@ function DemoInsightTable({
                 <td className="text-center tabular-nums">
                   {pctOf(it.count, roster.total)}
                 </td>
-                {spans[idx] > 0 && <td rowSpan={spans[idx]}>{msgs[idx]}</td>}
               </tr>
-            ));
-          })}
+            )),
+          )}
         </tbody>
       </table>
     </div>

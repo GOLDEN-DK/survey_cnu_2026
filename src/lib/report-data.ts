@@ -28,9 +28,6 @@ import {
   inspectionPointsOf,
   courseAvgOf,
   labelOf,
-  genderInsights,
-  ageInsights,
-  regionInsights,
   groupGapCommentary,
   responseRateCommentary,
   orderByLabels,
@@ -95,12 +92,7 @@ export type ReportData = {
   rateByGender: RateRow[];
   rateByAge: RateRow[];
   rateByTime: RateRow[];
-  regionGrouped: DistItem[]; // 지역 6개 권역 묶음(해석 포인트 표·차트용)
-  insights: {
-    gender: Record<string, string>;
-    age: Record<string, string>;
-    region: Record<string, string>;
-  };
+  regionGrouped: DistItem[]; // 지역 6개 권역 묶음(인구 구성 표·차트용)
   gapCommentary: { gender: string; age: string; time: string };
   rateCommentary: string;
   notes: NoteBundle[];
@@ -266,12 +258,7 @@ export async function getReportData(slug: string): Promise<ReportData | null> {
   // 지역은 6개 권역으로 묶어 해석 포인트 표·차트에 쓴다(붙임2는 세분 유지).
   const regionGrouped = roster ? groupRegions(roster.byRegion) : [];
 
-  // ── 인구 해석·집단 해설 ──
-  const insights = {
-    gender: roster ? genderInsights(roster.byGender, roster.total) : {},
-    age: roster ? ageInsights(roster.byAgeBand, roster.total) : {},
-    region: roster ? regionInsights(regionGrouped, roster.total) : {},
-  };
+  // ── 집단 해설 ──
   const gapCommentary = {
     gender: groupGapCommentary(stats.byGender, "성별"),
     age: groupGapCommentary(stats.byAgeBand, "연령대"),
@@ -363,7 +350,6 @@ export async function getReportData(slug: string): Promise<ReportData | null> {
     rateByAge,
     rateByTime,
     regionGrouped,
-    insights,
     gapCommentary,
     rateCommentary,
     notes,
