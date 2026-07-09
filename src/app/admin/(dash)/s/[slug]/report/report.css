@@ -59,6 +59,11 @@
 .report-root li {
   margin-bottom: 2px;
 }
+/* 형광펜(하이라이트) — 인라인 배경색은 mark의 style로, @media print에서 색 유지 */
+.report-root mark {
+  padding: 0 1px;
+  border-radius: 2px;
+}
 
 .report-root table {
   width: 100%;

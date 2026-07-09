@@ -5,6 +5,7 @@ import { useEditor, EditorContent, type Editor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { TextStyle } from "@tiptap/extension-text-style";
 import { Color } from "@tiptap/extension-color";
+import { Highlight } from "@tiptap/extension-highlight";
 import { Table, TableRow, TableHeader, TableCell } from "@tiptap/extension-table";
 import { TableMap } from "@tiptap/pm/tables";
 import { useEffect, useReducer } from "react";
@@ -51,6 +52,15 @@ const COLORS: { name: string; value: string | null }[] = [
   { name: "빨강", value: "#c0392b" },
   { name: "초록", value: "#1e7f4f" },
   { name: "회색", value: "#6b7280" },
+];
+
+// 형광펜(하이라이트) 팔레트. value=null 은 형광 제거.
+const HIGHLIGHTS: { name: string; value: string | null }[] = [
+  { name: "없음", value: null },
+  { name: "노랑", value: "#fff176" },
+  { name: "초록", value: "#b9f6ca" },
+  { name: "분홍", value: "#ff8ab4" },
+  { name: "파랑", value: "#80d8ff" },
 ];
 
 function ToolbarButton({
@@ -114,6 +124,7 @@ export function NoteEditor({
       StarterKit,
       TextStyle,
       Color,
+      Highlight.configure({ multicolor: true }),
       TableWithDensity,
       TableRow,
       HeaderWithColgap,
@@ -269,6 +280,30 @@ export function NoteEditor({
             }
             className="h-5 w-5 rounded border border-line"
             style={{ backgroundColor: c.value ?? "#111827" }}
+          />
+        ))}
+
+        <span className="ml-1 text-[11px] text-ink-soft">형광</span>
+        {HIGHLIGHTS.map((h) => (
+          <button
+            key={h.name}
+            type="button"
+            title={`형광 ${h.name}`}
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() =>
+              h.value
+                ? editor.chain().focus().setHighlight({ color: h.value }).run()
+                : editor.chain().focus().unsetHighlight().run()
+            }
+            className="h-5 w-5 rounded border border-line"
+            style={
+              h.value
+                ? { backgroundColor: h.value }
+                : {
+                    background:
+                      "linear-gradient(to top right, transparent 45%, #ef4444 45%, #ef4444 55%, transparent 55%)",
+                  }
+            }
           />
         ))}
 

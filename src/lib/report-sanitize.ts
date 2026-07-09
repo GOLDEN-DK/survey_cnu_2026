@@ -27,9 +27,11 @@ export function sanitizeNoteHtml(html: string): string {
       "colgroup",
       "col",
       "span",
+      "mark",
     ],
     allowedAttributes: {
       span: ["style"],
+      mark: ["style", "data-color"],
       table: ["data-density", "data-colgap"],
       th: ["colspan", "rowspan", "data-colgap"],
       td: ["colspan", "rowspan", "data-colgap"],
@@ -39,6 +41,12 @@ export function sanitizeNoteHtml(html: string): string {
     allowedStyles: {
       span: {
         color: [
+          /^#(?:[0-9a-fA-F]{3}){1,2}$/,
+          /^rgb\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}\s*\)$/,
+        ],
+      },
+      mark: {
+        "background-color": [
           /^#(?:[0-9a-fA-F]{3}){1,2}$/,
           /^rgb\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}\s*\)$/,
         ],
