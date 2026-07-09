@@ -210,8 +210,8 @@ export function RateBarChart({
 
 const RADIAN = Math.PI / 180;
 
-// recharts Pie label 콜백 — 조각별 {cx,cy,midAngle,innerRadius,outerRadius,percent}를 받아
-// 큰 조각(≥8%)은 링 안쪽에, 작은 조각은 지시선으로 바깥에 비율을 표기한다.
+// recharts Pie label 콜백 — 조각별 {cx,cy,midAngle,innerRadius,outerRadius,percent,name}를 받아
+// 큰 조각(≥8%)은 링 안쪽에, 작은 조각은 지시선으로 바깥에 지표명을 표기한다(정확한 비율은 범례).
 function renderDonutLabel(props: {
   cx?: number;
   cy?: number;
@@ -219,6 +219,8 @@ function renderDonutLabel(props: {
   innerRadius?: number;
   outerRadius?: number;
   percent?: number;
+  name?: string;
+  payload?: { name?: string };
 }) {
   const cx = props.cx ?? 0;
   const cy = props.cy ?? 0;
@@ -229,7 +231,7 @@ function renderDonutLabel(props: {
   if (pct < 2) return null;
   const cos = Math.cos(-midAngle * RADIAN);
   const sin = Math.sin(-midAngle * RADIAN);
-  const text = `${pct.toFixed(1)}%`;
+  const text = props.name ?? props.payload?.name ?? `${pct.toFixed(1)}%`;
   if (pct >= 8) {
     // 링 중앙에 인라인 표기 — 흰색 외곽선(halo)을 뒤에 깔아 조각색과 무관하게 판독.
     const r = (innerRadius + outerRadius) / 2;
@@ -292,7 +294,7 @@ function renderDonutLabel(props: {
   );
 }
 
-// 구성 비율 도넛 — 조각은 각도+비율 라벨로, 정확한 값은 아래 HTML 범례로 보완.
+// 구성 비율 도넛 — 조각엔 지표명 라벨, 정확한 비율은 아래 HTML 범례로 보완.
 export function DonutChart({
   data,
   title,

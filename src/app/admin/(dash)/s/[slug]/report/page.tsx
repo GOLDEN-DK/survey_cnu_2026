@@ -748,7 +748,7 @@ export default async function ReportPage({
                     {c.name}
                     {dayNightSuffix(c, true)}
                   </td>
-                  <td>{c.professor ?? "-"}</td>
+                  <td className="whitespace-nowrap">{c.professor ?? "-"}</td>
                   <td className="text-center tabular-nums">{c.total}</td>
                   <td className="text-center font-semibold tabular-nums">
                     {f2(c.overallAvg)}
